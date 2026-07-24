@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { setupAudioRecorderIPC } from './audioRecorder.js';
@@ -16,11 +16,26 @@ function createWindow() {
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#090D16',
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true
     }
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    if (mainWindow) mainWindow.show();
+  });
+
+  // Security: Deny unauthorized child window creation and open external links safely
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
   });
 
   if (process.env.NODE_ENV === 'development') {

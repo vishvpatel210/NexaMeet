@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "package": "npm run build && electron-builder",
     "start": "electron ."
   },
   "dependencies": {
@@ -21,5 +22,24 @@
     "electron-builder": "^24.13.3",
     "typescript": "^5.4.5",
     "vite": "^5.2.13"
+  },
+  "build": {
+    "appId": "com.nexameet.desktop",
+    "productName": "NexaMeet AI Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "mac": {
+      "target": ["dmg"]
+    },
+    "linux": {
+      "target": ["AppImage"]
+    }
   }
 }

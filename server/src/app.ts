@@ -7,6 +7,7 @@ import recordingRouter from './routes/recording.routes.js';
 import transcriptRouter from './routes/transcript.routes.js';
 import summaryRouter from './routes/summary.routes.js';
 import searchRouter from './routes/search.routes.js';
+import vaultRouter from './routes/vault.routes.js';
 
 const app: Application = express();
 
@@ -25,6 +26,7 @@ app.use('/api/v1/recordings', recordingRouter);
 app.use('/api/v1/transcripts', transcriptRouter);
 app.use('/api/v1/summaries', summaryRouter);
 app.use('/api/v1/search', searchRouter);
+app.use('/api/v1/vault', vaultRouter);
 
 // Root route
 app.get('/', (req: Request, res: Response) => {
@@ -37,7 +39,8 @@ app.get('/', (req: Request, res: Response) => {
     recordingsAPI: '/api/v1/recordings',
     transcriptsAPI: '/api/v1/transcripts',
     summariesAPI: '/api/v1/summaries',
-    searchAPI: '/api/v1/search'
+    searchAPI: '/api/v1/search',
+    vaultAPI: '/api/v1/vault/status'
   });
 });
 

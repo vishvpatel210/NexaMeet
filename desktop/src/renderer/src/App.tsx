@@ -4,6 +4,7 @@ import { TopNavbar } from './components/TopNavbar';
 import { CategoryFilters } from './components/CategoryFilters';
 import { MeetingList } from './components/MeetingList';
 import { NewMeetingModal } from './components/NewMeetingModal';
+import { LiveRecordingModal } from './components/LiveRecordingModal';
 import { ApiService } from './services/api';
 import { IMeeting } from '@shared/types/index';
 
@@ -14,6 +15,7 @@ export default function App() {
   const [activeDateScope, setActiveDateScope] = useState<string>('Today');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isRecordingModalOpen, setIsRecordingModalOpen] = useState<boolean>(false);
   const [backendConnected, setBackendConnected] = useState<boolean>(true);
 
   const fetchMeetings = async () => {
@@ -37,6 +39,18 @@ export default function App() {
     fetchMeetings();
   }, [activeCategory, searchQuery]);
 
+  // Global hotkey listener (Cmd/Ctrl + Shift + R) for instant recording
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        setIsRecordingModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleCreateMeeting = async (data: { title: string; category: string; location?: string }) => {
     const newMeeting = await ApiService.createMeeting(data);
     if (newMeeting) {
@@ -56,7 +70,7 @@ export default function App() {
       <Sidebar
         activeCategory={activeCategory}
         onSelectCategory={setActiveCategory}
-        onOpenNewMeeting={() => setIsModalOpen(true)}
+        onOpenNewMeeting={() => setIsRecordingModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -103,6 +117,13 @@ export default function App() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateMeeting}
+      />
+
+      {/* Live Recording Modal Overlay */}
+      <LiveRecordingModal
+        isOpen={isRecordingModalOpen}
+        onClose={() => setIsRecordingModalOpen(false)}
+        onRecordingSaved={fetchMeetings}
       />
     </div>
   );

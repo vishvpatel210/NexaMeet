@@ -6,10 +6,12 @@ import { MeetingList } from './components/MeetingList';
 import { NewMeetingModal } from './components/NewMeetingModal';
 import { LiveRecordingModal } from './components/LiveRecordingModal';
 import { MeetingDetailView } from './components/MeetingDetailView';
+import { CalendarView } from './components/CalendarView';
 import { ApiService } from './services/api';
 import { IMeeting } from '@shared/types/index';
 
 export default function App() {
+  const [activeView, setActiveView] = useState<'meetings' | 'calendar'>('meetings');
   const [meetings, setMeetings] = useState<IMeeting[]>([]);
   const [selectedMeeting, setSelectedMeeting] = useState<IMeeting | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -69,10 +71,20 @@ export default function App() {
     }
   };
 
+  const handleRecordForCalendarTask = (task: IMeeting) => {
+    setSelectedMeeting(task);
+    setIsRecordingModalOpen(true);
+  };
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#090D16', overflow: 'hidden' }}>
       {/* Sidebar Navigation */}
       <Sidebar
+        activeView={activeView}
+        onSelectView={(v) => {
+          setActiveView(v);
+          setSelectedMeeting(null);
+        }}
         activeCategory={activeCategory}
         onSelectCategory={(cat) => {
           setActiveCategory(cat);
@@ -91,10 +103,27 @@ export default function App() {
             onToggleStar={handleToggleStar}
             onOpenRecordingModal={() => setIsRecordingModalOpen(true)}
           />
+        ) : activeView === 'calendar' ? (
+          /* Task Calendar Workspace */
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            <TopNavbar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onRefresh={fetchMeetings}
+              backendConnected={backendConnected}
+            />
+            <main style={{ flex: 1, padding: '1.75rem 2.25rem', overflow: 'hidden' }}>
+              <CalendarView
+                meetings={meetings}
+                onRefresh={fetchMeetings}
+                onRecordForMeeting={handleRecordForCalendarTask}
+                onSelectMeeting={(m) => setSelectedMeeting(m)}
+              />
+            </main>
+          </div>
         ) : (
-          /* Dashboard Workspace */
+          /* Meetings Dashboard Workspace */
           <>
-            {/* Top Navbar */}
             <TopNavbar
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -102,7 +131,6 @@ export default function App() {
               backendConnected={backendConnected}
             />
 
-            {/* Content View Container */}
             <main style={{ flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.75rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.25rem' }}>
@@ -113,7 +141,6 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Category Pills & Date Tabs */}
               <CategoryFilters
                 activeCategory={activeCategory}
                 onSelectCategory={setActiveCategory}
@@ -121,7 +148,6 @@ export default function App() {
                 onSelectDateScope={setActiveDateScope}
               />
 
-              {/* Meetings List */}
               <MeetingList
                 meetings={meetings}
                 loading={loading}

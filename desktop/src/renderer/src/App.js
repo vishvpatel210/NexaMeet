@@ -7,8 +7,10 @@ import { MeetingList } from './components/MeetingList';
 import { NewMeetingModal } from './components/NewMeetingModal';
 import { LiveRecordingModal } from './components/LiveRecordingModal';
 import { MeetingDetailView } from './components/MeetingDetailView';
+import { CalendarView } from './components/CalendarView';
 import { ApiService } from './services/api';
 export default function App() {
+    const [activeView, setActiveView] = useState('meetings');
     const [meetings, setMeetings] = useState([]);
     const [selectedMeeting, setSelectedMeeting] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -64,13 +66,22 @@ export default function App() {
             setSelectedMeeting((prev) => prev ? { ...prev, isStarred: !currentStarred } : null);
         }
     };
-    return (_jsxs("div", { style: { display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#090D16', overflow: 'hidden' }, children: [_jsx(Sidebar, { activeCategory: activeCategory, onSelectCategory: (cat) => {
+    const handleRecordForCalendarTask = (task) => {
+        setSelectedMeeting(task);
+        setIsRecordingModalOpen(true);
+    };
+    return (_jsxs("div", { style: { display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#090D16', overflow: 'hidden' }, children: [_jsx(Sidebar, { activeView: activeView, onSelectView: (v) => {
+                    setActiveView(v);
+                    setSelectedMeeting(null);
+                }, activeCategory: activeCategory, onSelectCategory: (cat) => {
                     setActiveCategory(cat);
                     setSelectedMeeting(null);
                 }, onOpenNewMeeting: () => setIsRecordingModalOpen(true) }), _jsx("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }, children: selectedMeeting ? (
                 /* Split View Meeting Detail */
-                _jsx(MeetingDetailView, { meeting: selectedMeeting, onBack: () => setSelectedMeeting(null), onToggleStar: handleToggleStar, onOpenRecordingModal: () => setIsRecordingModalOpen(true) })) : (
-                /* Dashboard Workspace */
+                _jsx(MeetingDetailView, { meeting: selectedMeeting, onBack: () => setSelectedMeeting(null), onToggleStar: handleToggleStar, onOpenRecordingModal: () => setIsRecordingModalOpen(true) })) : activeView === 'calendar' ? (
+                /* Task Calendar Workspace */
+                _jsxs("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }, children: [_jsx(TopNavbar, { searchQuery: searchQuery, onSearchChange: setSearchQuery, onRefresh: fetchMeetings, backendConnected: backendConnected }), _jsx("main", { style: { flex: 1, padding: '1.75rem 2.25rem', overflow: 'hidden' }, children: _jsx(CalendarView, { meetings: meetings, onRefresh: fetchMeetings, onRecordForMeeting: handleRecordForCalendarTask, onSelectMeeting: (m) => setSelectedMeeting(m) }) })] })) : (
+                /* Meetings Dashboard Workspace */
                 _jsxs(_Fragment, { children: [_jsx(TopNavbar, { searchQuery: searchQuery, onSearchChange: setSearchQuery, onRefresh: fetchMeetings, backendConnected: backendConnected }), _jsxs("main", { style: { flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }, children: [_jsxs("div", { style: { marginBottom: '1.25rem' }, children: [_jsx("h1", { style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.75rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.25rem' }, children: "Meetings" }), _jsx("p", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "Manage your AI meeting notes, audio recordings, and structured intelligence." })] }), _jsx(CategoryFilters, { activeCategory: activeCategory, onSelectCategory: setActiveCategory, activeDateScope: activeDateScope, onSelectDateScope: setActiveDateScope }), _jsx(MeetingList, { meetings: meetings, loading: loading, onSelectMeeting: (m) => setSelectedMeeting(m), onToggleStar: handleToggleStar })] })] })) }), _jsx(NewMeetingModal, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), onSubmit: handleCreateMeeting }), _jsx(LiveRecordingModal, { isOpen: isRecordingModalOpen, onClose: () => setIsRecordingModalOpen(false), onRecordingSaved: () => {
                     fetchMeetings();
                 } })] }));

@@ -1,17 +1,25 @@
 import React from 'react';
-import { Video, Calendar, Star, Settings, Plus, Sparkles, FolderKanban } from 'lucide-react';
+import { Video, Calendar as CalendarIcon, Star, Settings, Plus, Sparkles, FolderKanban } from 'lucide-react';
 
 interface SidebarProps {
+  activeView: 'meetings' | 'calendar';
+  onSelectView: (view: 'meetings' | 'calendar') => void;
   activeCategory: string;
   onSelectCategory: (category: string) => void;
   onOpenNewMeeting: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeCategory, onSelectCategory, onOpenNewMeeting }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeView,
+  onSelectView,
+  activeCategory,
+  onSelectCategory,
+  onOpenNewMeeting
+}) => {
   const categories = [
     { id: 'All', label: 'All Meetings', icon: Video },
     { id: 'Work', label: 'Work', icon: FolderKanban },
-    { id: 'Personal', label: 'Personal', icon: Calendar },
+    { id: 'Personal', label: 'Personal', icon: CalendarIcon },
     { id: 'Important', label: 'Starred', icon: Star }
   ];
 
@@ -27,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeCategory, onSelectCatego
       userSelect: 'none'
     }}>
       {/* Brand Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', paddingLeft: '0.5rem' }}>
         <div style={{
           width: '32px',
           height: '32px',
@@ -72,44 +80,86 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeCategory, onSelectCatego
         New Meeting
       </button>
 
-      {/* Categories Navigation */}
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
-          Categories
+      {/* Primary Views (Meetings vs Calendar) */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <div
+          onClick={() => onSelectView('meetings')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.6rem 0.75rem',
+            borderRadius: '10px',
+            backgroundColor: activeView === 'meetings' ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+            color: activeView === 'meetings' ? '#06B6D4' : '#94A3B8',
+            fontWeight: activeView === 'meetings' ? 600 : 400,
+            fontSize: '0.9rem',
+            cursor: 'pointer'
+          }}
+        >
+          <Video size={18} color={activeView === 'meetings' ? '#06B6D4' : '#94A3B8'} />
+          Meetings Workspace
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            const isActive = activeCategory === cat.id;
 
-            return (
-              <div
-                key={cat.id}
-                onClick={() => onSelectCategory(cat.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.6rem 0.75rem',
-                  borderRadius: '10px',
-                  backgroundColor: isActive ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
-                  color: isActive ? '#06B6D4' : '#94A3B8',
-                  fontWeight: isActive ? 600 : 400,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Icon size={18} color={isActive ? '#06B6D4' : '#94A3B8'} />
-                {cat.label}
-              </div>
-            );
-          })}
+        <div
+          onClick={() => onSelectView('calendar')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.6rem 0.75rem',
+            borderRadius: '10px',
+            backgroundColor: activeView === 'calendar' ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+            color: activeView === 'calendar' ? '#06B6D4' : '#94A3B8',
+            fontWeight: activeView === 'calendar' ? 600 : 400,
+            fontSize: '0.9rem',
+            cursor: 'pointer'
+          }}
+        >
+          <CalendarIcon size={18} color={activeView === 'calendar' ? '#06B6D4' : '#94A3B8'} />
+          Task Calendar
         </div>
       </div>
 
+      {/* Categories Filter */}
+      {activeView === 'meetings' && (
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
+            Categories
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            {categories.map((cat) => {
+              const Icon = cat.icon;
+              const isActive = activeCategory === cat.id;
+
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => onSelectCategory(cat.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '10px',
+                    backgroundColor: isActive ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
+                    color: isActive ? '#06B6D4' : '#94A3B8',
+                    fontWeight: isActive ? 600 : 400,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Icon size={16} color={isActive ? '#06B6D4' : '#94A3B8'} />
+                  {cat.label}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Footer Settings */}
-      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1rem' }}>
+      <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1rem' }}>
         <div
           style={{
             display: 'flex',

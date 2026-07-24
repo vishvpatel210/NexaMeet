@@ -5,7 +5,7 @@ import { Transcript } from '../models/Transcript.js';
 import { Summary } from '../models/Summary.js';
 import { ActionItem } from '../models/ActionItem.js';
 
-// Create a new meeting
+// Create a new meeting / scheduled calendar task
 export const createMeeting = async (req: Request, res: Response) => {
   try {
     const { title, category, scheduledStart, scheduledEnd, location, status, isStarred, tags } = req.body;
@@ -17,10 +17,10 @@ export const createMeeting = async (req: Request, res: Response) => {
     const meeting = await Meeting.create({
       title,
       category: category || 'Work',
-      scheduledStart,
-      scheduledEnd,
+      scheduledStart: scheduledStart ? new Date(scheduledStart) : new Date(),
+      scheduledEnd: scheduledEnd ? new Date(scheduledEnd) : undefined,
       location,
-      status: status || 'completed',
+      status: status || (scheduledStart && new Date(scheduledStart) > new Date() ? 'scheduled' : 'completed'),
       isStarred: isStarred || false,
       tags: tags || []
     });
@@ -31,10 +31,10 @@ export const createMeeting = async (req: Request, res: Response) => {
   }
 };
 
-// Get all meetings (with category & starred filter)
+// Get all meetings / calendar tasks (with category, starred, search, and date range filters)
 export const getMeetings = async (req: Request, res: Response) => {
   try {
-    const { category, starred, search } = req.query;
+    const { category, starred, search, startDate, endDate } = req.query;
     const filter: any = {};
 
     if (category && category !== 'All') {
@@ -49,14 +49,20 @@ export const getMeetings = async (req: Request, res: Response) => {
       filter.title = { $regex: search as string, $options: 'i' };
     }
 
-    const meetings = await Meeting.find(filter).sort({ createdAt: -1 });
+    if (startDate || endDate) {
+      filter.scheduledStart = {};
+      if (startDate) filter.scheduledStart.$gte = new Date(startDate as string);
+      if (endDate) filter.scheduledStart.$lte = new Date(endDate as string);
+    }
+
+    const meetings = await Meeting.find(filter).sort({ scheduledStart: 1, createdAt: -1 });
     res.status(200).json({ success: true, count: meetings.length, data: meetings });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch meetings', message: error.message });
   }
 };
 
-// Get meeting by ID with linked recordings, transcript, and summary
+// Get meeting by ID with linked recordings, transcript, summary, and action items
 export const getMeetingById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

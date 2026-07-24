@@ -1,6 +1,7 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import healthRouter from './routes/health.routes.js';
+import meetingRouter from './routes/meeting.routes.js';
 
 const app: Application = express();
 
@@ -11,6 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/v1/health', healthRouter);
+app.use('/api/v1/meetings', meetingRouter);
 
 // Root route
 app.get('/', (req: Request, res: Response) => {
@@ -18,7 +20,8 @@ app.get('/', (req: Request, res: Response) => {
     name: 'NexaMeet API Backend',
     version: '0.1.0',
     status: 'online',
-    healthCheck: '/api/v1/health'
+    healthCheck: '/api/v1/health',
+    meetingsAPI: '/api/v1/meetings'
   });
 });
 

@@ -5,11 +5,13 @@ import { CategoryFilters } from './components/CategoryFilters';
 import { MeetingList } from './components/MeetingList';
 import { NewMeetingModal } from './components/NewMeetingModal';
 import { LiveRecordingModal } from './components/LiveRecordingModal';
+import { MeetingDetailView } from './components/MeetingDetailView';
 import { ApiService } from './services/api';
 import { IMeeting } from '@shared/types/index';
 
 export default function App() {
   const [meetings, setMeetings] = useState<IMeeting[]>([]);
+  const [selectedMeeting, setSelectedMeeting] = useState<IMeeting | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [activeDateScope, setActiveDateScope] = useState<string>('Today');
@@ -62,6 +64,9 @@ export default function App() {
     e.stopPropagation();
     await ApiService.toggleStar(meetingId, currentStarred);
     fetchMeetings();
+    if (selectedMeeting && ((selectedMeeting.id || (selectedMeeting as any)._id) === meetingId)) {
+      setSelectedMeeting((prev) => prev ? { ...prev, isStarred: !currentStarred } : null);
+    }
   };
 
   return (
@@ -69,47 +74,63 @@ export default function App() {
       {/* Sidebar Navigation */}
       <Sidebar
         activeCategory={activeCategory}
-        onSelectCategory={setActiveCategory}
+        onSelectCategory={(cat) => {
+          setActiveCategory(cat);
+          setSelectedMeeting(null);
+        }}
         onOpenNewMeeting={() => setIsRecordingModalOpen(true)}
       />
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-        {/* Top Navbar */}
-        <TopNavbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onRefresh={fetchMeetings}
-          backendConnected={backendConnected}
-        />
-
-        {/* Content View Container */}
-        <main style={{ flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.75rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.25rem' }}>
-              Meetings
-            </h1>
-            <p style={{ fontSize: '0.85rem', color: '#64748B' }}>
-              Manage your AI meeting notes, audio recordings, and structured intelligence.
-            </p>
-          </div>
-
-          {/* Category Pills & Date Tabs */}
-          <CategoryFilters
-            activeCategory={activeCategory}
-            onSelectCategory={setActiveCategory}
-            activeDateScope={activeDateScope}
-            onSelectDateScope={setActiveDateScope}
-          />
-
-          {/* Meetings List */}
-          <MeetingList
-            meetings={meetings}
-            loading={loading}
-            onSelectMeeting={(m) => console.log('Selected meeting:', m)}
+        {selectedMeeting ? (
+          /* Split View Meeting Detail */
+          <MeetingDetailView
+            meeting={selectedMeeting}
+            onBack={() => setSelectedMeeting(null)}
             onToggleStar={handleToggleStar}
+            onOpenRecordingModal={() => setIsRecordingModalOpen(true)}
           />
-        </main>
+        ) : (
+          /* Dashboard Workspace */
+          <>
+            {/* Top Navbar */}
+            <TopNavbar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onRefresh={fetchMeetings}
+              backendConnected={backendConnected}
+            />
+
+            {/* Content View Container */}
+            <main style={{ flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.75rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.25rem' }}>
+                  Meetings
+                </h1>
+                <p style={{ fontSize: '0.85rem', color: '#64748B' }}>
+                  Manage your AI meeting notes, audio recordings, and structured intelligence.
+                </p>
+              </div>
+
+              {/* Category Pills & Date Tabs */}
+              <CategoryFilters
+                activeCategory={activeCategory}
+                onSelectCategory={setActiveCategory}
+                activeDateScope={activeDateScope}
+                onSelectDateScope={setActiveDateScope}
+              />
+
+              {/* Meetings List */}
+              <MeetingList
+                meetings={meetings}
+                loading={loading}
+                onSelectMeeting={(m) => setSelectedMeeting(m)}
+                onToggleStar={handleToggleStar}
+              />
+            </main>
+          </>
+        )}
       </div>
 
       {/* New Meeting Modal */}
@@ -123,7 +144,9 @@ export default function App() {
       <LiveRecordingModal
         isOpen={isRecordingModalOpen}
         onClose={() => setIsRecordingModalOpen(false)}
-        onRecordingSaved={fetchMeetings}
+        onRecordingSaved={() => {
+          fetchMeetings();
+        }}
       />
     </div>
   );

@@ -1,0 +1,582 @@
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  IMeeting,
+  IRecording,
+  ITranscript,
+  ISummary,
+  IActionItem
+} from '@shared/types/index';
+import { ApiService } from '../services/api';
+import {
+  ArrowLeft,
+  Play,
+  Pause,
+  Volume2,
+  FileText,
+  Sparkles,
+  CheckSquare,
+  Square,
+  Star,
+  Plus,
+  RefreshCw,
+  Clock
+} from 'lucide-react';
+
+interface MeetingDetailViewProps {
+  meeting: IMeeting;
+  onBack: () => void;
+  onToggleStar: (meetingId: string, currentStarred: boolean, e: React.MouseEvent) => void;
+  onOpenRecordingModal: () => void;
+}
+
+export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
+  meeting,
+  onBack,
+  onToggleStar,
+  onOpenRecordingModal
+}) => {
+  const [recordings, setRecordings] = useState<IRecording[]>([]);
+  const [transcript, setTranscript] = useState<ITranscript | null>(null);
+  const [summary, setSummary] = useState<ISummary | null>(null);
+  const [actionItems, setActionItems] = useState<IActionItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'summary' | 'transcription'>('summary');
+  const [selectedRecording, setSelectedRecording] = useState<IRecording | null>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [loadingAI, setLoadingAI] = useState<boolean>(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('executive-brief');
+  const [rawUserNotes, setRawUserNotes] = useState<string>('');
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const meetingId = meeting.id || (meeting as any)._id;
+
+  const fetchMeetingDetails = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/v1/meetings/${meetingId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          setRecordings(json.data.recordings || []);
+          setTranscript(json.data.transcript || null);
+          setSummary(json.data.summary || null);
+          setActionItems(json.data.actionItems || []);
+
+          if (json.data.recordings && json.data.recordings.length > 0) {
+            setSelectedRecording(json.data.recordings[0]);
+          }
+
+          if (json.data.summary?.rawUserNotes) {
+            setRawUserNotes(json.data.summary.rawUserNotes);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch meeting detail:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMeetingDetails();
+  }, [meetingId]);
+
+  const handlePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSeek = (timeSec: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = timeSec;
+      setCurrentTime(timeSec);
+      if (!isPlaying) {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const handleGenerateAISummary = async () => {
+    setLoadingAI(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/v1/summaries/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meetingId,
+          templateId: selectedTemplate,
+          rawUserNotes
+        })
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          setSummary(json.data.summary);
+          setActionItems(json.data.actionItems || []);
+          setActiveTab('summary');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to generate summary:', err);
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  const handleToggleActionItem = async (itemId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    try {
+      const res = await fetch(`http://localhost:5000/api/v1/summaries/action-items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        setActionItems(prev =>
+          prev.map(item => ((item.id || (item as any)._id) === itemId ? { ...item, status: newStatus as any } : item))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to toggle action item:', err);
+    }
+  };
+
+  const formatTimer = (totalSecs: number) => {
+    const mins = Math.floor(totalSecs / 60);
+    const secs = Math.floor(totalSecs % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#090D16', overflow: 'hidden', userSelect: 'none' }}>
+      {/* Header Bar */}
+      <div style={{
+        padding: '1.25rem 2rem',
+        backgroundColor: '#0F172A',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            onClick={onBack}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              backgroundColor: '#151D2F',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '8px',
+              padding: '0.4rem 0.8rem',
+              color: '#94A3B8',
+              fontSize: '0.85rem',
+              cursor: 'pointer'
+            }}
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.35rem', fontWeight: 700, color: '#F8FAFC' }}>
+                {meeting.title}
+              </h2>
+              {meeting.category && (
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: '6px',
+                  backgroundColor: '#1E293B',
+                  color: '#06B6D4'
+                }}>
+                  {meeting.category}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.2rem' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <Clock size={12} /> {new Date(meeting.createdAt || Date.now()).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={(e) => onToggleStar(meetingId, meeting.isStarred, e)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem' }}
+          >
+            <Star size={20} color={meeting.isStarred ? '#F59E0B' : '#475569'} fill={meeting.isStarred ? '#F59E0B' : 'none'} />
+          </button>
+
+          <button
+            onClick={onOpenRecordingModal}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '10px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%)',
+              color: '#FFFFFF',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              cursor: 'pointer'
+            }}
+          >
+            <Plus size={16} />
+            Add Recording
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Workspace */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Left Pane: Recordings & Notes Editor */}
+        <div style={{
+          flex: '1.1',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#090D16'
+        }}>
+          {/* Recordings Carousel */}
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+              Recordings ({recordings.length})
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+              {recordings.map((rec, idx) => {
+                const isSel = selectedRecording && (selectedRecording.id || (selectedRecording as any)._id) === (rec.id || (rec as any)._id);
+                return (
+                  <div
+                    key={rec.id || (rec as any)._id}
+                    onClick={() => setSelectedRecording(rec)}
+                    style={{
+                      padding: '0.5rem 0.9rem',
+                      borderRadius: '10px',
+                      backgroundColor: isSel ? '#1E293B' : '#151D2F',
+                      border: isSel ? '1px solid #06B6D4' : '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      color: isSel ? '#F8FAFC' : '#94A3B8'
+                    }}
+                  >
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                    <span>Recording {idx + 1}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B' }}>{formatTimer(rec.durationSeconds || 10)}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Audio Player Bar */}
+            {selectedRecording && (
+              <div style={{
+                marginTop: '1rem',
+                backgroundColor: '#151D2F',
+                borderRadius: '12px',
+                padding: '0.75rem 1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                border: '1px solid rgba(255, 255, 255, 0.06)'
+              }}>
+                <button
+                  onClick={handlePlayPause}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    backgroundColor: '#06B6D4',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isPlaying ? <Pause size={18} fill="#FFF" /> : <Play size={18} fill="#FFF" />}
+                </button>
+
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#94A3B8' }}>
+                    {formatTimer(currentTime)}
+                  </span>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={duration || 100}
+                    value={currentTime}
+                    onChange={(e) => handleSeek(parseFloat(e.target.value))}
+                    style={{ flex: 1, cursor: 'pointer', accentColor: '#06B6D4' }}
+                  />
+
+                  <span style={{ fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#64748B' }}>
+                    {formatTimer(duration)}
+                  </span>
+                </div>
+
+                <Volume2 size={16} color="#64748B" />
+
+                <audio
+                  ref={audioRef}
+                  src={`http://localhost:5000/api/v1/recordings/file/${selectedRecording.filePath.split(/[/\\]/).pop()}`}
+                  onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
+                  onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+                  onEnded={() => setIsPlaying(false)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Shorthand Notes Editor */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Handwritten Notes
+              </span>
+              <button
+                onClick={handleGenerateAISummary}
+                disabled={loadingAI}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #06B6D4',
+                  backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                  color: '#06B6D4',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <Sparkles size={14} />
+                {loadingAI ? 'Generating...' : 'Enhance with AI'}
+              </button>
+            </div>
+
+            <textarea
+              placeholder="Type your notes here during the meeting..."
+              value={rawUserNotes}
+              onChange={(e) => setRawUserNotes(e.target.value)}
+              style={{
+                flex: 1,
+                width: '100%',
+                backgroundColor: '#151D2F',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px',
+                padding: '1rem',
+                color: '#F8FAFC',
+                fontSize: '0.9rem',
+                fontFamily: 'Inter, sans-serif',
+                resize: 'none',
+                outline: 'none',
+                lineHeight: 1.6
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Right Pane: AI Intelligence (Summary vs Transcription View) */}
+        <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', backgroundColor: '#0F172A' }}>
+          {/* Tab Switcher */}
+          <div style={{
+            padding: '0 1.5rem',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.5rem',
+            backgroundColor: '#090D16'
+          }}>
+            <button
+              onClick={() => setActiveTab('summary')}
+              style={{
+                padding: '1rem 0',
+                border: 'none',
+                background: 'none',
+                fontSize: '0.95rem',
+                fontWeight: activeTab === 'summary' ? 600 : 400,
+                color: activeTab === 'summary' ? '#06B6D4' : '#64748B',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'summary' ? '2px solid #06B6D4' : '2px solid transparent'
+              }}
+            >
+              📄 AI Summary
+            </button>
+
+            <button
+              onClick={() => setActiveTab('transcription')}
+              style={{
+                padding: '1rem 0',
+                border: 'none',
+                background: 'none',
+                fontSize: '0.95rem',
+                fontWeight: activeTab === 'transcription' ? 600 : 400,
+                color: activeTab === 'transcription' ? '#06B6D4' : '#64748B',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'transcription' ? '2px solid #06B6D4' : '2px solid transparent'
+              }}
+            >
+              🎙️ Verbatim Transcript
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
+            {activeTab === 'summary' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Executive Summary Card */}
+                <div style={{
+                  backgroundColor: '#151D2F',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  padding: '1.25rem 1.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#A855F7', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                    <FileText size={18} />
+                    Executive Summary
+                  </div>
+                  <p style={{ color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                    {summary?.executiveSummary || 'No summary generated yet. Click "Enhance with AI" to generate structured meeting intelligence.'}
+                  </p>
+                </div>
+
+                {/* Key Points Card */}
+                {summary?.keyPoints && summary.keyPoints.length > 0 && (
+                  <div style={{
+                    backgroundColor: '#151D2F',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    padding: '1.25rem 1.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#F59E0B', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                      <Star size={18} fill="#F59E0B" />
+                      Key Points
+                    </div>
+                    <ul style={{ paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: 1.5 }}>
+                      {summary.keyPoints.map((point, idx) => (
+                        <li key={idx}>{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Action Items Card */}
+                <div style={{
+                  backgroundColor: '#151D2F',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  padding: '1.25rem 1.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10B981', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                    <CheckSquare size={18} />
+                    Action Items ({actionItems.filter(a => a.status === 'completed').length}/{actionItems.length})
+                  </div>
+
+                  {actionItems.length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', color: '#64748B' }}>No action items extracted.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {actionItems.map((item) => {
+                        const isDone = item.status === 'completed';
+                        const itemId = item.id || (item as any)._id;
+                        return (
+                          <div
+                            key={itemId}
+                            onClick={() => handleToggleActionItem(itemId, item.status)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.5rem 0.75rem',
+                              borderRadius: '8px',
+                              backgroundColor: '#090D16',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {isDone ? <CheckSquare size={18} color="#10B981" /> : <Square size={18} color="#64748B" />}
+                            <span style={{
+                              flex: 1,
+                              fontSize: '0.85rem',
+                              color: isDone ? '#64748B' : '#F8FAFC',
+                              textDecoration: isDone ? 'line-through' : 'none'
+                            }}>
+                              {item.taskDescription}
+                            </span>
+                            {item.assignee && (
+                              <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }}>
+                                {item.assignee}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Transcription View */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {!transcript || !transcript.segments || transcript.segments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#64748B', fontSize: '0.9rem' }}>
+                    No transcript generated for this meeting.
+                  </div>
+                ) : (
+                  transcript.segments.map((seg, idx) => (
+                    <div
+                      key={seg.id || idx}
+                      onClick={() => handleSeek(seg.startTime)}
+                      style={{
+                        backgroundColor: '#151D2F',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        padding: '1rem 1.25rem',
+                        cursor: 'pointer',
+                        transition: 'border-color 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.3)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)')}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#06B6D4' }}>
+                          {seg.speakerLabel || `Speaker ${idx + 1}`}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#64748B' }}>
+                          {formatTimer(seg.startTime)} - {formatTimer(seg.endTime)}
+                        </span>
+                      </div>
+                      <p style={{ color: '#E2E8F0', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                        {seg.content}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

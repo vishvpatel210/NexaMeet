@@ -1,30 +1,38 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { MeetingCard } from './MeetingCard.js';
-import { Video } from 'lucide-react';
-export const MeetingList = ({ meetings, loading, onSelectMeeting, onToggleStar }) => {
+import { MeetingCard } from './MeetingCard';
+import { CalendarX } from 'lucide-react';
+export const MeetingList = ({ meetings, loading, onSelectMeeting, onToggleStar, onDeleteMeeting }) => {
     if (loading) {
-        return (_jsx("div", { style: { padding: '3rem', textAlign: 'center', color: '#94A3B8' }, children: _jsx("div", { style: { fontSize: '1rem', fontWeight: 500 }, children: "Loading meetings..." }) }));
+        return (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }, children: [1, 2, 3].map((i) => (_jsx("div", { style: {
+                    height: '80px',
+                    backgroundColor: '#151D2F',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    animation: 'pulse 1.5s infinite ease-in-out'
+                } }, i))) }));
     }
     if (meetings.length === 0) {
         return (_jsxs("div", { style: {
-                padding: '4rem 2rem',
-                textAlign: 'center',
-                backgroundColor: '#151D2F',
-                borderRadius: '16px',
-                border: '1px dashed rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '1rem'
+                justifyContent: 'center',
+                padding: '4rem 2rem',
+                backgroundColor: '#151D2F',
+                borderRadius: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                marginTop: '1.5rem',
+                textAlign: 'center'
             }, children: [_jsx("div", { style: {
-                        width: '48px',
-                        height: '48px',
+                        width: '56px',
+                        height: '56px',
                         borderRadius: '50%',
-                        backgroundColor: '#1E293B',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
-                    }, children: _jsx(Video, { size: 24, color: "#64748B" }) }), _jsxs("div", { children: [_jsx("h3", { style: { fontSize: '1.1rem', fontWeight: 600, color: '#F8FAFC', marginBottom: '0.25rem' }, children: "No Meetings Found" }), _jsx("p", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "Create a new meeting to begin recording audio and generating AI summaries." })] })] }));
+                        justifyContent: 'center',
+                        marginBottom: '1rem'
+                    }, children: _jsx(CalendarX, { size: 28, color: "#06B6D4" }) }), _jsx("h3", { style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.2rem', fontWeight: 600, color: '#F8FAFC', marginBottom: '0.5rem' }, children: "No meetings found" }), _jsx("p", { style: { fontSize: '0.85rem', color: '#64748B', maxWidth: '360px' }, children: "Click \"+ New Meeting\" in the sidebar to schedule your first meeting or start recording audio instantly." })] }));
     }
-    return (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '0.75rem' }, children: meetings.map((meeting) => (_jsx(MeetingCard, { meeting: meeting, onSelect: onSelectMeeting, onToggleStar: onToggleStar }, meeting.id || meeting._id))) }));
+    return (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '0.9rem', marginTop: '1.25rem' }, children: meetings.map((meeting) => (_jsx(MeetingCard, { meeting: meeting, onSelect: onSelectMeeting, onToggleStar: onToggleStar, onDeleteMeeting: onDeleteMeeting }, meeting.id || meeting._id))) }));
 };

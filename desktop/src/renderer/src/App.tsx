@@ -56,7 +56,11 @@ export default function App() {
   }, []);
 
   const handleCreateMeeting = async (data: { title: string; category: string; location?: string }) => {
-    const newMeeting = await ApiService.createMeeting(data);
+    const newMeeting = await ApiService.createMeeting({
+      title: data.title,
+      category: data.category as any,
+      location: data.location
+    });
     if (newMeeting) {
       fetchMeetings();
     }
@@ -68,6 +72,17 @@ export default function App() {
     fetchMeetings();
     if (selectedMeeting && ((selectedMeeting.id || (selectedMeeting as any)._id) === meetingId)) {
       setSelectedMeeting((prev) => prev ? { ...prev, isStarred: !currentStarred } : null);
+    }
+  };
+
+  const handleDeleteMeeting = async (meetingId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const success = await ApiService.deleteMeeting(meetingId);
+    if (success) {
+      fetchMeetings();
+      if (selectedMeeting && ((selectedMeeting.id || (selectedMeeting as any)._id) === meetingId)) {
+        setSelectedMeeting(null);
+      }
     }
   };
 
@@ -153,6 +168,7 @@ export default function App() {
                 loading={loading}
                 onSelectMeeting={(m) => setSelectedMeeting(m)}
                 onToggleStar={handleToggleStar}
+                onDeleteMeeting={handleDeleteMeeting}
               />
             </main>
           </>

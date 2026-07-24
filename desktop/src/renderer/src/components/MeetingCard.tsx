@@ -1,114 +1,149 @@
 import React from 'react';
 import { IMeeting } from '@shared/types/index';
-import { Clock, MapPin, Star, ChevronRight, Mic } from 'lucide-react';
+import { Mic, Star, ChevronRight, Clock, MapPin, Trash2 } from 'lucide-react';
 
 interface MeetingCardProps {
   meeting: IMeeting;
   onSelect: (meeting: IMeeting) => void;
   onToggleStar: (meetingId: string, currentStarred: boolean, e: React.MouseEvent) => void;
+  onDeleteMeeting: (meetingId: string, e: React.MouseEvent) => void;
 }
 
-export const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onSelect, onToggleStar }) => {
-  const formatTime = (dateStr?: string) => {
-    if (!dateStr) return '7:00 PM - 8:00 PM';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return '7:00 PM - 8:00 PM';
-    }
-  };
+export const MeetingCard: React.FC<MeetingCardProps> = ({
+  meeting,
+  onSelect,
+  onToggleStar,
+  onDeleteMeeting
+}) => {
+  const formattedTime = new Date(meeting.scheduledStart || meeting.createdAt || Date.now())
+    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const meetingId = meeting.id || (meeting as any)._id;
 
   return (
     <div
       onClick={() => onSelect(meeting)}
       style={{
         backgroundColor: '#151D2F',
+        borderRadius: '16px',
         border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '14px',
-        padding: '1.2rem 1.5rem',
+        padding: '1.25rem 1.5rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         cursor: 'pointer',
-        transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
         userSelect: 'none'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.3)';
+        e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.4)';
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(6, 182, 212, 0.15)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.transform = 'translateY(0px)';
+        e.currentTarget.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.2)';
       }}
     >
-      {/* Left Info */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+      {/* Meeting Metadata Details */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 600, color: '#F8FAFC' }}>
+          <h3 style={{
+            fontFamily: 'Outfit, sans-serif',
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            color: '#F8FAFC',
+            margin: 0
+          }}>
             {meeting.title}
           </h3>
+
           {meeting.category && (
             <span style={{
               fontSize: '0.75rem',
-              fontWeight: 500,
+              fontWeight: 600,
               padding: '0.2rem 0.6rem',
               borderRadius: '6px',
               backgroundColor: '#1E293B',
-              color: '#94A3B8'
+              color: '#06B6D4'
             }}>
               {meeting.category}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.8rem', color: '#64748B' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.8rem', color: '#64748B' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <Clock size={14} color="#64748B" />
-            {formatTime(meeting.scheduledStart)}
-          </div>
+            {formattedTime}
+          </span>
+
           {meeting.location && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <MapPin size={14} color="#64748B" />
               {meeting.location}
-            </div>
+            </span>
           )}
         </div>
       </div>
 
-      {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {/* Live Mic Indicator */}
+      {/* Actions (Microphone Dot Indicator, Star Toggle, Delete Button, Arrow Chevron) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {/* Live Audio Status Indicator */}
         <div style={{
-          width: '24px',
-          height: '24px',
+          width: '28px',
+          height: '28px',
           borderRadius: '50%',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
-        }}>
+        }} title="Microphone Active">
           <Mic size={14} color="#10B981" />
         </div>
 
         {/* Star Button */}
         <button
-          onClick={(e) => onToggleStar(meeting.id || (meeting as any)._id, meeting.isStarred, e)}
+          onClick={(e) => onToggleStar(meetingId, meeting.isStarred, e)}
+          title={meeting.isStarred ? 'Unstar Meeting' : 'Star Meeting'}
           style={{
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            padding: '0.2rem'
+            padding: '0.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
           <Star
             size={18}
-            color={meeting.isStarred ? '#F59E0B' : '#475569'}
+            color={meeting.isStarred ? '#F59E0B' : '#64748B'}
             fill={meeting.isStarred ? '#F59E0B' : 'none'}
           />
+        </button>
+
+        {/* Delete Meeting Button (Beside Star) */}
+        <button
+          onClick={(e) => onDeleteMeeting(meetingId, e)}
+          title="Delete Meeting"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#64748B',
+            transition: 'color 0.15s ease'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#F43F5E')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748B')}
+        >
+          <Trash2 size={18} />
         </button>
 
         <ChevronRight size={18} color="#64748B" />

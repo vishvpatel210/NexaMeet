@@ -27,11 +27,26 @@ export class SummaryService {
    * Generate AI summary and extract action items using OpenRouter API
    */
   static async generateSummary(
-    meetingId: string,
+    meetingIdOrParams: string | { meetingId: string; templateId?: string; rawUserNotes?: string; model?: string },
     templateId = 'executive-brief',
     rawUserNotes = '',
     model?: string
   ): Promise<{ summary: ISummaryDocument; actionItems: IActionItemDocument[] }> {
+    let meetingId: string;
+
+    if (typeof meetingIdOrParams === 'object') {
+      meetingId = meetingIdOrParams.meetingId;
+      templateId = meetingIdOrParams.templateId || 'executive-brief';
+      rawUserNotes = meetingIdOrParams.rawUserNotes || '';
+      model = meetingIdOrParams.model;
+    } else {
+      meetingId = meetingIdOrParams;
+    }
+
+    if (!meetingId) {
+      throw new Error('meetingId parameter is required for summary generation');
+    }
+
     const meeting = await Meeting.findById(meetingId);
     if (!meeting) {
       throw new Error(`Meeting with ID ${meetingId} not found`);
@@ -148,25 +163,29 @@ export class SummaryService {
       return this.generateOfflineFallback(params.meetingTitle, params.rawUserNotes);
     }
 
-    const systemPrompt = `You are NexaMeet AI, an elite Senior Meeting Intelligence Architect and Executive Synthesizer.
-Your goal is to transform raw meeting transcripts and user shorthand notes into deep, structured, highly actionable meeting intelligence.
+    const systemPrompt = `You are NexaMeet AI, an expert enterprise meeting intelligence assistant.
+Your responsibility is to transform raw meeting transcripts into structured, professional meeting intelligence.
 
-CRITICAL FACTUAL GROUNDING RULES:
-1. STRICT ZERO HALLUCINATION POLICY: Rely STRICTLY and EXCLUSIVELY on facts explicitly stated in the provided transcript and notes.
-2. DO NOT invent, assume, or fabricate any tasks, assignees, dates, decisions, or risk items that were not discussed.
-3. If an item (such as risks or questions) was not mentioned in the transcript, return an empty array [] for that field.
+Analyze the transcript carefully.
+Extract only information explicitly present in the transcript.
+Do NOT invent facts, names, dates, or decisions.
 
-OUTPUT FORMATTING INSTRUCTIONS:
-Return STRICTLY a valid JSON object matching this schema:
+OUTPUT FORMATTING REQUIREMENTS:
+Return ONLY valid JSON.
+Do not include markdown.
+Do not include explanations.
+Do not wrap JSON inside code fences.
+
+JSON SCHEMA:
 {
   "meetingTitle": "Descriptive short title for the meeting",
-  "executiveSummary": "A comprehensive 3-5 sentence executive brief covering main themes, context, decisions, and immediate trajectory.",
+  "executiveSummary": "A comprehensive executive summary (150-250 words) covering core context, discussion, key decisions, and strategic trajectory.",
   "keyPoints": [
-    "Bullet point highlighting core technical or strategic discussion point",
+    "Bullet point detailing core technical or strategic discussion topic",
     "Bullet point detailing operational alignment or roadblock"
   ],
   "decisions": [
-    "Explicit decision or agreement reached during the meeting"
+    "Explicit agreement or decision reached during the meeting"
   ],
   "actionItems": [
     {

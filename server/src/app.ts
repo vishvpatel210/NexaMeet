@@ -1,7 +1,9 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import path from 'path';
 import healthRouter from './routes/health.routes.js';
 import meetingRouter from './routes/meeting.routes.js';
+import recordingRouter from './routes/recording.routes.js';
 
 const app: Application = express();
 
@@ -10,9 +12,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded recording files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Routes
 app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/meetings', meetingRouter);
+app.use('/api/v1/recordings', recordingRouter);
 
 // Root route
 app.get('/', (req: Request, res: Response) => {
@@ -21,7 +27,8 @@ app.get('/', (req: Request, res: Response) => {
     version: '0.1.0',
     status: 'online',
     healthCheck: '/api/v1/health',
-    meetingsAPI: '/api/v1/meetings'
+    meetingsAPI: '/api/v1/meetings',
+    recordingsAPI: '/api/v1/recordings'
   });
 });
 

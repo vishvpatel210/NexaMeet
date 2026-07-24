@@ -60,7 +60,10 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
 
   const fetchMeetingDetails = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/meetings/${meetingId}`);
+      console.log(`[Stage 9: UI Display] Fetching fresh non-cached meeting details for Meeting ID: "${meetingId}"...`);
+      const res = await fetch(`http://localhost:5000/api/v1/meetings/${meetingId}`, {
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.data) {
@@ -68,6 +71,8 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
           setTranscript(json.data.transcript || null);
           setSummary(json.data.summary || null);
           setActionItems(json.data.actionItems || []);
+
+          console.log(`[Stage 9: UI Display] Received updated summary for "${meeting.title}". ExecSummary length: ${json.data.summary?.executiveSummary?.length || 0}.`);
 
           if (json.data.recordings && json.data.recordings.length > 0) {
             if (!selectedRecording) {
@@ -160,7 +165,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
     try {
       const res = await fetch('http://localhost:5000/api/v1/summaries/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
         body: JSON.stringify({
           meetingId,
           templateId: selectedTemplate,
@@ -174,6 +179,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
           setSummary(json.data.summary);
           setActionItems(json.data.actionItems || []);
           setActiveTab('summary');
+          await fetchMeetingDetails();
         }
       }
     } catch (err) {

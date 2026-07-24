@@ -47,6 +47,10 @@ export class SummaryService {
       throw new Error('meetingId parameter is required for summary generation');
     }
 
+    console.log(`\n==================================================`);
+    console.log(`[Stage 4: Prompt Build & LLM Processing] Meeting ID: "${meetingId}"`);
+    console.log(`==================================================`);
+
     const meeting = await Meeting.findById(meetingId);
     if (!meeting) {
       throw new Error(`Meeting with ID ${meetingId} not found`);
@@ -58,8 +62,11 @@ export class SummaryService {
       ? transcriptDoc.segments.map(s => `[${s.speakerLabel} (${s.startTime}s - ${s.endTime}s)]: ${s.content}`).join('\n')
       : 'No transcript recorded for this meeting.';
 
-    console.log(`[SummaryService] Processing COMPLETE merged transcript for meeting "${meeting.title}" (${meetingId}).`);
-    console.log(`[SummaryService] Transcript length: ${transcriptText.length} characters, Total Segments: ${transcriptDoc?.segments?.length || 0}.`);
+    console.log(`\n--- [Stage 4: FULL MERGED TRANSCRIPT SENT TO MODEL] ---`);
+    console.log(`Meeting Title: "${meeting.title}"`);
+    console.log(`Transcript Length: ${transcriptText.length} chars | Total Segments: ${transcriptDoc?.segments?.length || 0}`);
+    console.log(`TRANSCRIPT CONTENT:\n${transcriptText}`);
+    console.log(`-------------------------------------------------------\n`);
 
     const template = TemplateService.getTemplateById(templateId);
     const selectedModel = model || process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-lite-001';
@@ -110,6 +117,10 @@ export class SummaryService {
       }
     }
 
+    console.log(`\n--- [Stage 8: DATABASE SAVE VERIFIED] ---`);
+    console.log(`Saved Summary ID: "${summary._id}" | Action Items Count: ${actionItems.length}`);
+    console.log(`==================================================\n`);
+
     return { summary, actionItems };
   }
 
@@ -142,7 +153,8 @@ export class SummaryService {
       }
     }
 
-    console.warn('[SummaryService] All OpenRouter LLM attempts failed. Utilizing robust offline fallback.');
+    console.warn(`\n⚠️ [DETECTION: OFFLINE FALLBACK TRIGGERED] ⚠️`);
+    console.warn(`Reason: All OpenRouter LLM attempts failed. Utilizing robust offline fallback for "${params.meetingTitle}".`);
     return this.generateOfflineFallback(params.meetingTitle, params.rawUserNotes);
   }
 
@@ -159,7 +171,7 @@ export class SummaryService {
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
-      console.warn('⚠️ OPENROUTER_API_KEY is not set. Using offline summary fallback.');
+      console.warn(`\n⚠️ [DETECTION: OFFLINE FALLBACK TRIGGERED - NO API KEY] ⚠️`);
       return this.generateOfflineFallback(params.meetingTitle, params.rawUserNotes);
     }
 
@@ -219,8 +231,11 @@ ${params.transcriptText}
 
 Synthesize comprehensive, strictly grounded meeting intelligence now in valid JSON format:`;
 
-    console.log(`[SummaryService] Sending API Request to OpenRouter Model: "${params.model}".`);
-    console.log(`[SummaryService] Prompt character count: ${userPrompt.length + systemPrompt.length}.`);
+    console.log(`\n--- [Stage 5: OPENROUTER API CALL] ---`);
+    console.log(`Target Model: "${params.model}"`);
+    console.log(`Temperature: 0.2 | TopP: 0.95 | MaxTokens: 4000`);
+    console.log(`Full User Prompt:\n${userPrompt}`);
+    console.log(`--------------------------------------\n`);
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -253,7 +268,10 @@ Synthesize comprehensive, strictly grounded meeting intelligence now in valid JS
     const data: any = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || '';
 
-    console.log(`[SummaryService] Raw OpenRouter LLM Response Received (${rawContent.length} chars).`);
+    console.log(`\n--- [Stage 6: RAW OPENROUTER RESPONSE RECEIVED] ---`);
+    console.log(`Response Length: ${rawContent.length} chars`);
+    console.log(`RAW CONTENT:\n${rawContent}`);
+    console.log(`---------------------------------------------------\n`);
 
     // Clean JSON response (strip markdown code blocks ```json ... ```)
     let cleanedContent = rawContent.trim();
@@ -265,7 +283,12 @@ Synthesize comprehensive, strictly grounded meeting intelligence now in valid JS
 
     const parsed: IGeneratedSummaryPayload = JSON.parse(cleanedContent);
 
-    console.log(`[SummaryService] Successfully parsed JSON summary. Executive summary length: ${parsed.executiveSummary?.length || 0}, Key Points: ${parsed.keyPoints?.length || 0}, Action Items: ${parsed.actionItems?.length || 0}.`);
+    console.log(`\n--- [Stage 7: JSON PARSE & VALIDATION SUCCESSFUL] ---`);
+    console.log(`Parsed Title: "${parsed.meetingTitle}"`);
+    console.log(`Executive Summary Length: ${parsed.executiveSummary?.length || 0} chars`);
+    console.log(`Key Points: ${parsed.keyPoints?.length || 0} items`);
+    console.log(`Action Items: ${parsed.actionItems?.length || 0} items`);
+    console.log(`-----------------------------------------------------\n`);
 
     return {
       meetingTitle: parsed.meetingTitle || params.meetingTitle,
@@ -283,6 +306,7 @@ Synthesize comprehensive, strictly grounded meeting intelligence now in valid JS
    * Offline summary fallback
    */
   private static generateOfflineFallback(meetingTitle: string, userNotes: string): IGeneratedSummaryPayload {
+    console.warn(`[SummaryService] Generating unique offline fallback payload for "${meetingTitle}"`);
     return {
       meetingTitle,
       executiveSummary: `The meeting focused on "${meetingTitle}". Key project decisions, architectural trade-offs, and operational next steps were reviewed by the team.`,

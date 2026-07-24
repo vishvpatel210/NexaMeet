@@ -6,6 +6,7 @@ import meetingRouter from './routes/meeting.routes.js';
 import recordingRouter from './routes/recording.routes.js';
 import transcriptRouter from './routes/transcript.routes.js';
 import summaryRouter from './routes/summary.routes.js';
+import searchRouter from './routes/search.routes.js';
 
 const app: Application = express();
 
@@ -23,6 +24,7 @@ app.use('/api/v1/meetings', meetingRouter);
 app.use('/api/v1/recordings', recordingRouter);
 app.use('/api/v1/transcripts', transcriptRouter);
 app.use('/api/v1/summaries', summaryRouter);
+app.use('/api/v1/search', searchRouter);
 
 // Root route
 app.get('/', (req: Request, res: Response) => {
@@ -34,7 +36,8 @@ app.get('/', (req: Request, res: Response) => {
     meetingsAPI: '/api/v1/meetings',
     recordingsAPI: '/api/v1/recordings',
     transcriptsAPI: '/api/v1/transcripts',
-    summariesAPI: '/api/v1/summaries'
+    summariesAPI: '/api/v1/summaries',
+    searchAPI: '/api/v1/search'
   });
 });
 

@@ -7,6 +7,7 @@ export interface IActionItemDocument extends Document {
   assignee: string;
   status: 'pending' | 'completed';
   dueDate?: Date;
+  priority: 'High' | 'Medium' | 'Low';
   createdAt: Date;
 }
 
@@ -17,7 +18,8 @@ const ActionItemSchema = new Schema<IActionItemDocument>(
     taskDescription: { type: String, required: true },
     assignee: { type: String, default: 'Unassigned' },
     status: { type: String, enum: ['pending', 'completed'], default: 'pending', index: true },
-    dueDate: { type: Date }
+    dueDate: { type: Date },
+    priority: { type: String, enum: ['High', 'Medium', 'Low'], default: 'Medium' }
   },
   {
     timestamps: true

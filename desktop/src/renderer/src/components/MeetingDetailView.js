@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Volume2, FileText, Sparkles, CheckSquare, Square, Star, Plus, Trash2, Clock, RefreshCw, Mic } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Volume2, FileText, Sparkles, CheckSquare, Square, Star, Plus, Trash2, Clock, RefreshCw, Mic, AlertTriangle, HelpCircle, CheckCircle, ArrowRight } from 'lucide-react';
 export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordingModalForMeeting }) => {
     const [recordings, setRecordings] = useState([]);
     const [transcript, setTranscript] = useState(null);
@@ -32,7 +32,6 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                             setSelectedRecording(json.data.recordings[0]);
                         }
                         else {
-                            // Update selected recording reference
                             const updatedSel = json.data.recordings.find((r) => (r.id || r._id) === (selectedRecording.id || selectedRecording._id));
                             if (updatedSel)
                                 setSelectedRecording(updatedSel);
@@ -207,7 +206,7 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                             display: 'flex',
                             flexDirection: 'column',
                             backgroundColor: '#090D16'
-                        }, children: [_jsxs("div", { style: { padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }, children: [_jsx("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }, children: _jsxs("div", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }, children: ["Recordings Carousel (", recordings.length, ")"] }) }), _jsx("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }, children: recordings.length === 0 ? (_jsx("div", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "No recordings attached to this meeting container. Click \"+ Add Follow-up Recording\"." })) : (recordings.map((rec, idx) => {
+                        }, children: [_jsxs("div", { style: { padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }, children: [_jsxs("div", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }, children: ["Recordings Carousel (", recordings.length, ")"] }), _jsx("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }, children: recordings.length === 0 ? (_jsx("div", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "No recordings attached. Click \"+ Add Follow-up Recording\"." })) : (recordings.map((rec, idx) => {
                                             const recId = rec.id || rec._id;
                                             const isSel = selectedRecording && (selectedRecording.id || selectedRecording._id) === recId;
                                             const sttStatus = rec.sttStatus || 'completed';
@@ -306,7 +305,7 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                             color: activeTab === 'summary' ? '#06B6D4' : '#64748B',
                                             cursor: 'pointer',
                                             borderBottom: activeTab === 'summary' ? '2px solid #06B6D4' : '2px solid transparent'
-                                        }, children: "\uD83D\uDCC4 AI Summary" }), _jsx("button", { onClick: () => setActiveTab('transcription'), style: {
+                                        }, children: "\uD83D\uDCC4 AI Meeting Intelligence" }), _jsx("button", { onClick: () => setActiveTab('transcription'), style: {
                                             padding: '1rem 0',
                                             border: 'none',
                                             background: 'none',
@@ -315,17 +314,22 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                             color: activeTab === 'transcription' ? '#06B6D4' : '#64748B',
                                             cursor: 'pointer',
                                             borderBottom: activeTab === 'transcription' ? '2px solid #06B6D4' : '2px solid transparent'
-                                        }, children: "\uD83C\uDF99\uFE0F Merged Verbatim Transcript" })] }), _jsx("div", { style: { flex: 1, padding: '1.5rem', overflowY: 'auto' }, children: activeTab === 'summary' ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '1.5rem' }, children: [_jsxs("div", { style: {
+                                        }, children: "\uD83C\uDF99\uFE0F Merged Verbatim Transcript" })] }), _jsx("div", { style: { flex: 1, padding: '1.5rem', overflowY: 'auto' }, children: activeTab === 'summary' ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '1.25rem' }, children: [_jsxs("div", { style: {
                                                 backgroundColor: '#151D2F',
                                                 borderRadius: '14px',
                                                 border: '1px solid rgba(255, 255, 255, 0.08)',
                                                 padding: '1.25rem 1.5rem'
-                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#A855F7', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(FileText, { size: 18 }), "Executive Summary"] }), _jsx("p", { style: { color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.6 }, children: summary?.executiveSummary || 'No summary generated yet. Click "+ Add Follow-up Recording" or "Enhance with AI" to generate structured meeting intelligence.' })] }), summary?.keyPoints && summary.keyPoints.length > 0 && (_jsxs("div", { style: {
+                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#A855F7', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(FileText, { size: 18 }), "Executive Brief"] }), _jsx("p", { style: { color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.6 }, children: summary?.executiveSummary || 'No summary generated yet. Click "+ Add Follow-up Recording" or "Enhance with AI" to generate structured meeting intelligence.' })] }), summary?.keyPoints && summary.keyPoints.length > 0 && (_jsxs("div", { style: {
                                                 backgroundColor: '#151D2F',
                                                 borderRadius: '14px',
                                                 border: '1px solid rgba(255, 255, 255, 0.08)',
                                                 padding: '1.25rem 1.5rem'
-                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#F59E0B', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(Star, { size: 18, fill: "#F59E0B" }), "Key Points"] }), _jsx("ul", { style: { paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: 1.5 }, children: summary.keyPoints.map((point, idx) => (_jsx("li", { children: point }, idx))) })] })), _jsxs("div", { style: {
+                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#F59E0B', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(Star, { size: 18, fill: "#F59E0B" }), "Key Discussion Points"] }), _jsx("ul", { style: { paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: 1.5 }, children: summary.keyPoints.map((point, idx) => (_jsx("li", { children: point }, idx))) })] })), summary?.decisions && summary.decisions.length > 0 && (_jsxs("div", { style: {
+                                                backgroundColor: '#151D2F',
+                                                borderRadius: '14px',
+                                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                padding: '1.25rem 1.5rem'
+                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#06B6D4', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(CheckCircle, { size: 18 }), "Agreements & Decisions Reached"] }), _jsx("ul", { style: { paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: 1.5 }, children: summary.decisions.map((dec, idx) => (_jsx("li", { children: dec }, idx))) })] })), _jsxs("div", { style: {
                                                 backgroundColor: '#151D2F',
                                                 borderRadius: '14px',
                                                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -333,11 +337,12 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                             }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10B981', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(CheckSquare, { size: 18 }), "Action Items (", actionItems.filter(a => a.status === 'completed').length, "/", actionItems.length, ")"] }), actionItems.length === 0 ? (_jsx("div", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "No action items extracted." })) : (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '0.6rem' }, children: actionItems.map((item) => {
                                                         const isDone = item.status === 'completed';
                                                         const itemId = item.id || item._id;
+                                                        const prio = item.priority || 'Medium';
                                                         return (_jsxs("div", { onClick: () => handleToggleActionItem(itemId, item.status), style: {
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 gap: '0.75rem',
-                                                                padding: '0.5rem 0.75rem',
+                                                                padding: '0.6rem 0.75rem',
                                                                 borderRadius: '8px',
                                                                 backgroundColor: '#090D16',
                                                                 cursor: 'pointer'
@@ -346,8 +351,30 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                                                         fontSize: '0.85rem',
                                                                         color: isDone ? '#64748B' : '#F8FAFC',
                                                                         textDecoration: isDone ? 'line-through' : 'none'
-                                                                    }, children: item.taskDescription }), item.assignee && (_jsx("span", { style: { fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }, children: item.assignee }))] }, itemId));
-                                                    }) }))] })] })) : (
+                                                                    }, children: item.taskDescription }), _jsx("span", { style: {
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: 600,
+                                                                        padding: '0.15rem 0.45rem',
+                                                                        borderRadius: '4px',
+                                                                        backgroundColor: prio === 'High' ? 'rgba(244, 63, 94, 0.15)' : prio === 'Low' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                                                        color: prio === 'High' ? '#F43F5E' : prio === 'Low' ? '#06B6D4' : '#F59E0B'
+                                                                    }, children: prio }), item.assignee && (_jsx("span", { style: { fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }, children: item.assignee }))] }, itemId));
+                                                    }) }))] }), _jsxs("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }, children: [summary?.risks && summary.risks.length > 0 && (_jsxs("div", { style: {
+                                                        backgroundColor: '#151D2F',
+                                                        borderRadius: '14px',
+                                                        border: '1px solid rgba(244, 63, 94, 0.2)',
+                                                        padding: '1rem 1.25rem'
+                                                    }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#F43F5E', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }, children: [_jsx(AlertTriangle, { size: 16 }), " Risks & Dependencies"] }), _jsx("ul", { style: { paddingLeft: '1rem', color: '#CBD5E1', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }, children: summary.risks.map((r, idx) => (_jsx("li", { children: r }, idx))) })] })), summary?.questions && summary.questions.length > 0 && (_jsxs("div", { style: {
+                                                        backgroundColor: '#151D2F',
+                                                        borderRadius: '14px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.2)',
+                                                        padding: '1rem 1.25rem'
+                                                    }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#F59E0B', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }, children: [_jsx(HelpCircle, { size: 16 }), " Unresolved Questions"] }), _jsx("ul", { style: { paddingLeft: '1rem', color: '#CBD5E1', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }, children: summary.questions.map((q, idx) => (_jsx("li", { children: q }, idx))) })] }))] }), summary?.nextSteps && summary.nextSteps.length > 0 && (_jsxs("div", { style: {
+                                                backgroundColor: '#151D2F',
+                                                borderRadius: '14px',
+                                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                padding: '1.25rem 1.5rem'
+                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3B82F6', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(ArrowRight, { size: 18 }), "Immediate Next Steps"] }), _jsx("ul", { style: { paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }, children: summary.nextSteps.map((ns, idx) => (_jsx("li", { children: ns }, idx))) })] }))] })) : (
                                 /* Merged Verbatim Transcription View */
                                 _jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '1rem' }, children: !transcript || !transcript.segments || transcript.segments.length === 0 ? (_jsx("div", { style: { textAlign: 'center', padding: '3rem', color: '#64748B', fontSize: '0.9rem' }, children: "No transcript generated yet for this meeting." })) : (transcript.segments.map((seg, idx) => (_jsxs("div", { onClick: () => handleSeek(seg.startTime), style: {
                                             backgroundColor: '#151D2F',

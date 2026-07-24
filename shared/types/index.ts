@@ -3,7 +3,7 @@
 export type CategoryType = 'Work' | 'Personal' | 'Important';
 export type MeetingStatus = 'scheduled' | 'recording' | 'completed' | 'archived';
 export type STTEngineType = 'whisper-local' | 'whisper-api';
-export type SummaryModelType = 'gemini-1.5-pro' | 'gemini-1.5-flash' | 'gpt-4o' | 'gpt-4o-mini';
+export type SummaryModelType = 'google/gemini-2.0-flash-lite-001' | 'openai/gpt-4o-mini' | 'anthropic/claude-3.5-sonnet' | 'google/gemini-flash-1.5' | string;
 
 export interface IMeeting {
   id: string;
@@ -27,6 +27,8 @@ export interface IRecording {
   sampleRate: number;
   channels: number;
   format: 'wav' | 'opus';
+  sttStatus?: 'pending' | 'completed' | 'failed';
+  errorMessage?: string;
   createdAt: string;
 }
 
@@ -54,6 +56,10 @@ export interface ISummary {
   rawUserNotes?: string;
   executiveSummary: string;
   keyPoints: string[];
+  decisions?: string[];
+  risks?: string[];
+  questions?: string[];
+  nextSteps?: string[];
   modelUsed: SummaryModelType;
   createdAt: string;
 }
@@ -66,6 +72,7 @@ export interface IActionItem {
   assignee: string;
   status: 'pending' | 'completed';
   dueDate?: string;
+  priority?: 'High' | 'Medium' | 'Low';
 }
 
 export interface ISearchQuery {

@@ -22,7 +22,10 @@ import {
   Clock,
   RefreshCw,
   Mic,
-  AlertCircle
+  AlertTriangle,
+  HelpCircle,
+  CheckCircle,
+  ArrowRight
 } from 'lucide-react';
 
 interface MeetingDetailViewProps {
@@ -70,7 +73,6 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
             if (!selectedRecording) {
               setSelectedRecording(json.data.recordings[0]);
             } else {
-              // Update selected recording reference
               const updatedSel = json.data.recordings.find((r: any) => (r.id || r._id) === (selectedRecording.id || (selectedRecording as any)._id));
               if (updatedSel) setSelectedRecording(updatedSel);
             }
@@ -270,7 +272,6 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
             <Star size={20} color={meeting.isStarred ? '#F59E0B' : '#475569'} fill={meeting.isStarred ? '#F59E0B' : 'none'} />
           </button>
 
-          {/* Granola-style Permanent "Add Follow-up Recording" Button */}
           <button
             onClick={() => onOpenRecordingModalForMeeting(meetingId)}
             style={{
@@ -306,16 +307,14 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
         }}>
           {/* Recordings Carousel */}
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Recordings Carousel ({recordings.length})
-              </div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+              Recordings Carousel ({recordings.length})
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
               {recordings.length === 0 ? (
                 <div style={{ fontSize: '0.85rem', color: '#64748B' }}>
-                  No recordings attached to this meeting container. Click "+ Add Follow-up Recording".
+                  No recordings attached. Click "+ Add Follow-up Recording".
                 </div>
               ) : (
                 recordings.map((rec, idx) => {
@@ -349,7 +348,6 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                       <span>Recording {idx + 1}</span>
                       <span style={{ fontSize: '0.75rem', color: '#64748B' }}>{formatTimer(rec.durationSeconds || 10)}</span>
 
-                      {/* Retry Transcription Button if failed or requested */}
                       <button
                         onClick={(e) => handleRetryTranscription(recId, e)}
                         title="Retry Speech-to-Text Transcription"
@@ -368,7 +366,6 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                         <RefreshCw size={13} className={retryingRecordingId === recId ? 'spin' : ''} />
                       </button>
 
-                      {/* Delete Specific Speech Button */}
                       <button
                         onClick={(e) => handleDeleteRecording(recId, e)}
                         title="Delete Specific Speech"
@@ -528,7 +525,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                 borderBottom: activeTab === 'summary' ? '2px solid #06B6D4' : '2px solid transparent'
               }}
             >
-              📄 AI Summary
+              📄 AI Meeting Intelligence
             </button>
 
             <button
@@ -551,7 +548,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
           {/* Tab Content */}
           <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
             {activeTab === 'summary' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {/* Executive Summary Card */}
                 <div style={{
                   backgroundColor: '#151D2F',
@@ -561,7 +558,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#A855F7', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
                     <FileText size={18} />
-                    Executive Summary
+                    Executive Brief
                   </div>
                   <p style={{ color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.6 }}>
                     {summary?.executiveSummary || 'No summary generated yet. Click "+ Add Follow-up Recording" or "Enhance with AI" to generate structured meeting intelligence.'}
@@ -578,7 +575,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#F59E0B', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
                       <Star size={18} fill="#F59E0B" />
-                      Key Points
+                      Key Discussion Points
                     </div>
                     <ul style={{ paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: 1.5 }}>
                       {summary.keyPoints.map((point, idx) => (
@@ -588,7 +585,27 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                   </div>
                 )}
 
-                {/* Action Items Card */}
+                {/* Decisions Card */}
+                {summary?.decisions && summary.decisions.length > 0 && (
+                  <div style={{
+                    backgroundColor: '#151D2F',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    padding: '1.25rem 1.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#06B6D4', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                      <CheckCircle size={18} />
+                      Agreements & Decisions Reached
+                    </div>
+                    <ul style={{ paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: 1.5 }}>
+                      {summary.decisions.map((dec, idx) => (
+                        <li key={idx}>{dec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Action Items Checklist Card */}
                 <div style={{
                   backgroundColor: '#151D2F',
                   borderRadius: '14px',
@@ -607,6 +624,8 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                       {actionItems.map((item) => {
                         const isDone = item.status === 'completed';
                         const itemId = item.id || (item as any)._id;
+                        const prio = (item as any).priority || 'Medium';
+
                         return (
                           <div
                             key={itemId}
@@ -615,7 +634,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.75rem',
-                              padding: '0.5rem 0.75rem',
+                              padding: '0.6rem 0.75rem',
                               borderRadius: '8px',
                               backgroundColor: '#090D16',
                               cursor: 'pointer'
@@ -630,6 +649,18 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                             }}>
                               {item.taskDescription}
                             </span>
+
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '4px',
+                              backgroundColor: prio === 'High' ? 'rgba(244, 63, 94, 0.15)' : prio === 'Low' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                              color: prio === 'High' ? '#F43F5E' : prio === 'Low' ? '#06B6D4' : '#F59E0B'
+                            }}>
+                              {prio}
+                            </span>
+
                             {item.assignee && (
                               <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }}>
                                 {item.assignee}
@@ -641,6 +672,65 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* Risks & Questions Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  {summary?.risks && summary.risks.length > 0 && (
+                    <div style={{
+                      backgroundColor: '#151D2F',
+                      borderRadius: '14px',
+                      border: '1px solid rgba(244, 63, 94, 0.2)',
+                      padding: '1rem 1.25rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#F43F5E', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                        <AlertTriangle size={16} /> Risks & Dependencies
+                      </div>
+                      <ul style={{ paddingLeft: '1rem', color: '#CBD5E1', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        {summary.risks.map((r, idx) => (
+                          <li key={idx}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {summary?.questions && summary.questions.length > 0 && (
+                    <div style={{
+                      backgroundColor: '#151D2F',
+                      borderRadius: '14px',
+                      border: '1px solid rgba(245, 158, 11, 0.2)',
+                      padding: '1rem 1.25rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#F59E0B', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                        <HelpCircle size={16} /> Unresolved Questions
+                      </div>
+                      <ul style={{ paddingLeft: '1rem', color: '#CBD5E1', fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        {summary.questions.map((q, idx) => (
+                          <li key={idx}>{q}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Next Steps */}
+                {summary?.nextSteps && summary.nextSteps.length > 0 && (
+                  <div style={{
+                    backgroundColor: '#151D2F',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    padding: '1.25rem 1.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3B82F6', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                      <ArrowRight size={18} />
+                      Immediate Next Steps
+                    </div>
+                    <ul style={{ paddingLeft: '1.2rem', color: '#CBD5E1', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      {summary.nextSteps.map((ns, idx) => (
+                        <li key={idx}>{ns}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
               /* Merged Verbatim Transcription View */

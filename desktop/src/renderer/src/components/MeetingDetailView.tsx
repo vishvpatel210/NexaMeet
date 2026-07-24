@@ -18,7 +18,7 @@ import {
   Square,
   Star,
   Plus,
-  RefreshCw,
+  Trash2,
   Clock
 } from 'lucide-react';
 
@@ -64,6 +64,8 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
 
           if (json.data.recordings && json.data.recordings.length > 0) {
             setSelectedRecording(json.data.recordings[0]);
+          } else {
+            setSelectedRecording(null);
           }
 
           if (json.data.summary?.rawUserNotes) {
@@ -99,6 +101,27 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
         audioRef.current.play();
         setIsPlaying(true);
       }
+    }
+  };
+
+  const handleDeleteRecording = async (recId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`http://localhost:5000/api/v1/recordings/${recId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        const remaining = recordings.filter(r => (r.id || (r as any)._id) !== recId);
+        setRecordings(remaining);
+
+        if (selectedRecording && ((selectedRecording.id || (selectedRecording as any)._id) === recId)) {
+          setSelectedRecording(remaining.length > 0 ? remaining[0] : null);
+          setIsPlaying(false);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete audio recording:', err);
     }
   };
 
@@ -258,31 +281,57 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-              {recordings.map((rec, idx) => {
-                const isSel = selectedRecording && (selectedRecording.id || (selectedRecording as any)._id) === (rec.id || (rec as any)._id);
-                return (
-                  <div
-                    key={rec.id || (rec as any)._id}
-                    onClick={() => setSelectedRecording(rec)}
-                    style={{
-                      padding: '0.5rem 0.9rem',
-                      borderRadius: '10px',
-                      backgroundColor: isSel ? '#1E293B' : '#151D2F',
-                      border: isSel ? '1px solid #06B6D4' : '1px solid rgba(255, 255, 255, 0.08)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      color: isSel ? '#F8FAFC' : '#94A3B8'
-                    }}
-                  >
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                    <span>Recording {idx + 1}</span>
-                    <span style={{ fontSize: '0.75rem', color: '#64748B' }}>{formatTimer(rec.durationSeconds || 10)}</span>
-                  </div>
-                );
-              })}
+              {recordings.length === 0 ? (
+                <div style={{ fontSize: '0.85rem', color: '#64748B' }}>No speech recordings added yet. Click "+ Add Recording".</div>
+              ) : (
+                recordings.map((rec, idx) => {
+                  const recId = rec.id || (rec as any)._id;
+                  const isSel = selectedRecording && (selectedRecording.id || (selectedRecording as any)._id) === recId;
+                  return (
+                    <div
+                      key={recId}
+                      onClick={() => setSelectedRecording(rec)}
+                      style={{
+                        padding: '0.5rem 0.9rem',
+                        borderRadius: '10px',
+                        backgroundColor: isSel ? '#1E293B' : '#151D2F',
+                        border: isSel ? '1px solid #06B6D4' : '1px solid rgba(255, 255, 255, 0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        color: isSel ? '#F8FAFC' : '#94A3B8'
+                      }}
+                    >
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                      <span>Recording {idx + 1}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>{formatTimer(rec.durationSeconds || 10)}</span>
+
+                      {/* Delete Specific Speech Button */}
+                      <button
+                        onClick={(e) => handleDeleteRecording(recId, e)}
+                        title="Delete Specific Speech"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#64748B',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.1rem 0.2rem',
+                          marginLeft: '0.2rem',
+                          borderRadius: '4px'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#F43F5E')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#64748B')}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             {/* Audio Player Bar */}

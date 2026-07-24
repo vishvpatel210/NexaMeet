@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Volume2, FileText, Sparkles, CheckSquare, Square, Star, Plus, Clock } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Volume2, FileText, Sparkles, CheckSquare, Square, Star, Plus, Trash2, Clock } from 'lucide-react';
 export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordingModal }) => {
     const [recordings, setRecordings] = useState([]);
     const [transcript, setTranscript] = useState(null);
@@ -28,6 +28,9 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                     setActionItems(json.data.actionItems || []);
                     if (json.data.recordings && json.data.recordings.length > 0) {
                         setSelectedRecording(json.data.recordings[0]);
+                    }
+                    else {
+                        setSelectedRecording(null);
                     }
                     if (json.data.summary?.rawUserNotes) {
                         setRawUserNotes(json.data.summary.rawUserNotes);
@@ -62,6 +65,25 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                 audioRef.current.play();
                 setIsPlaying(true);
             }
+        }
+    };
+    const handleDeleteRecording = async (recId, e) => {
+        e.stopPropagation();
+        try {
+            const res = await fetch(`http://localhost:5000/api/v1/recordings/${recId}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                const remaining = recordings.filter(r => (r.id || r._id) !== recId);
+                setRecordings(remaining);
+                if (selectedRecording && ((selectedRecording.id || selectedRecording._id) === recId)) {
+                    setSelectedRecording(remaining.length > 0 ? remaining[0] : null);
+                    setIsPlaying(false);
+                }
+            }
+        }
+        catch (err) {
+            console.error('Failed to delete audio recording:', err);
         }
     };
     const handleGenerateAISummary = async () => {
@@ -156,8 +178,9 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                             display: 'flex',
                             flexDirection: 'column',
                             backgroundColor: '#090D16'
-                        }, children: [_jsxs("div", { style: { padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }, children: [_jsxs("div", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }, children: ["Recordings (", recordings.length, ")"] }), _jsx("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }, children: recordings.map((rec, idx) => {
-                                            const isSel = selectedRecording && (selectedRecording.id || selectedRecording._id) === (rec.id || rec._id);
+                        }, children: [_jsxs("div", { style: { padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }, children: [_jsxs("div", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }, children: ["Recordings (", recordings.length, ")"] }), _jsx("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }, children: recordings.length === 0 ? (_jsx("div", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "No speech recordings added yet. Click \"+ Add Recording\"." })) : (recordings.map((rec, idx) => {
+                                            const recId = rec.id || rec._id;
+                                            const isSel = selectedRecording && (selectedRecording.id || selectedRecording._id) === recId;
                                             return (_jsxs("div", { onClick: () => setSelectedRecording(rec), style: {
                                                     padding: '0.5rem 0.9rem',
                                                     borderRadius: '10px',
@@ -169,8 +192,18 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                                     cursor: 'pointer',
                                                     fontSize: '0.85rem',
                                                     color: isSel ? '#F8FAFC' : '#94A3B8'
-                                                }, children: [_jsx("div", { style: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' } }), _jsxs("span", { children: ["Recording ", idx + 1] }), _jsx("span", { style: { fontSize: '0.75rem', color: '#64748B' }, children: formatTimer(rec.durationSeconds || 10) })] }, rec.id || rec._id));
-                                        }) }), selectedRecording && (_jsxs("div", { style: {
+                                                }, children: [_jsx("div", { style: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' } }), _jsxs("span", { children: ["Recording ", idx + 1] }), _jsx("span", { style: { fontSize: '0.75rem', color: '#64748B' }, children: formatTimer(rec.durationSeconds || 10) }), _jsx("button", { onClick: (e) => handleDeleteRecording(recId, e), title: "Delete Specific Speech", style: {
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: '#64748B',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            padding: '0.1rem 0.2rem',
+                                                            marginLeft: '0.2rem',
+                                                            borderRadius: '4px'
+                                                        }, onMouseEnter: (e) => (e.currentTarget.style.color = '#F43F5E'), onMouseLeave: (e) => (e.currentTarget.style.color = '#64748B'), children: _jsx(Trash2, { size: 13 }) })] }, recId));
+                                        })) }), selectedRecording && (_jsxs("div", { style: {
                                             marginTop: '1rem',
                                             backgroundColor: '#151D2F',
                                             borderRadius: '12px',

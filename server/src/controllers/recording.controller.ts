@@ -1,31 +1,36 @@
 import { Request, Response } from 'express';
-import path from 'path';
 import fs from 'fs';
-import { RecordingService } from '../services/recording.service.js';
+import path from 'path';
+import { Recording } from '../models/Recording.js';
+import { Meeting } from '../models/Meeting.js';
 
-// Upload audio recording file and save metadata
+// Upload audio file stream for a meeting
 export const uploadRecording = async (req: Request, res: Response) => {
   try {
-    const file = req.file;
-    const { meetingId, durationSeconds, sampleRate, channels, format } = req.body;
-
-    if (!file) {
+    if (!req.file) {
       return res.status(400).json({ error: 'No audio file uploaded' });
     }
 
+    const { meetingId, durationSeconds } = req.body;
+
     if (!meetingId) {
-      // Cleanup uploaded temp file if meetingId is missing
-      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-      return res.status(400).json({ error: 'meetingId is required' });
+      // Clean up uploaded file if meetingId missing
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Meeting ID is required' });
     }
 
-    const recording = await RecordingService.createRecording({
+    const meeting = await Meeting.findById(meetingId);
+    if (!meeting) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+
+    const recording = await Recording.create({
       meetingId,
-      filePath: file.path,
-      durationSeconds: durationSeconds ? parseFloat(durationSeconds) : 0,
-      sampleRate: sampleRate ? parseInt(sampleRate, 10) : 16000,
-      channels: channels ? parseInt(channels, 10) : 1,
-      format: format || 'wav'
+      filePath: req.file.path,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype || 'audio/wav',
+      durationSeconds: durationSeconds ? parseFloat(durationSeconds) : 0
     });
 
     res.status(201).json({
@@ -34,30 +39,18 @@ export const uploadRecording = async (req: Request, res: Response) => {
       data: recording
     });
   } catch (error: any) {
-    // Cleanup uploaded file on error
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
-    res.status(500).json({ error: 'Failed to upload recording', message: error.message });
+    res.status(500).json({ error: 'Failed to upload audio recording', message: error.message });
   }
 };
 
-// Get recordings for a specific meeting
-export const getRecordingsByMeeting = async (req: Request, res: Response) => {
-  try {
-    const { meetingId } = req.params;
-    const recordings = await RecordingService.getRecordingsByMeeting(meetingId);
-    res.status(200).json({ success: true, count: recordings.length, data: recordings });
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to fetch recordings', message: error.message });
-  }
-};
-
-// Stream audio recording file by filename
-export const streamAudioFile = async (req: Request, res: Response) => {
+// Stream audio recording file statically or with range requests
+export const getAudioFile = async (req: Request, res: Response) => {
   try {
     const { filename } = req.params;
-    const filePath = path.join(process.cwd(), 'uploads', 'recordings', filename);
+    const filePath = path.join(process.cwd(), 'uploads', filename);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Audio file not found' });
@@ -73,7 +66,7 @@ export const streamAudioFile = async (req: Request, res: Response) => {
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
       const chunksize = end - start + 1;
-      const fileStream = fs.createReadStream(filePath, { start, end });
+      const file = fs.createReadStream(filePath, { start, end });
       const head = {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
         'Accept-Ranges': 'bytes',
@@ -82,7 +75,7 @@ export const streamAudioFile = async (req: Request, res: Response) => {
       };
 
       res.writeHead(206, head);
-      fileStream.pipe(res);
+      file.pipe(res);
     } else {
       const head = {
         'Content-Length': fileSize,
@@ -96,17 +89,44 @@ export const streamAudioFile = async (req: Request, res: Response) => {
   }
 };
 
-// Delete recording
+// Get all audio recordings for a specific meeting
+export const getRecordingsByMeeting = async (req: Request, res: Response) => {
+  try {
+    const { meetingId } = req.params;
+    const recordings = await Recording.find({ meetingId }).sort({ createdAt: 1 });
+    res.status(200).json({ success: true, count: recordings.length, data: recordings });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch recordings', message: error.message });
+  }
+};
+
+// Delete a specific audio recording speech file
 export const deleteRecording = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const deleted = await RecordingService.deleteRecording(id);
+    const recording = await Recording.findById(id);
 
-    if (!deleted) {
-      return res.status(404).json({ error: 'Recording not found' });
+    if (!recording) {
+      return res.status(404).json({ error: 'Audio recording not found' });
     }
 
-    res.status(200).json({ success: true, message: 'Recording deleted successfully', id });
+    // Delete audio file from local disk if it exists
+    if (fs.existsSync(recording.filePath)) {
+      try {
+        fs.unlinkSync(recording.filePath);
+      } catch (err) {
+        console.warn('Failed to delete physical file:', recording.filePath, err);
+      }
+    }
+
+    // Delete recording record from MongoDB
+    await Recording.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Audio recording speech file deleted successfully',
+      id
+    });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete recording', message: error.message });
   }

@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import dns from 'node:dns';
 
-// Force Google DNS to resolve MongoDB Atlas SRV records reliably
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 } catch (e) {
@@ -9,6 +8,11 @@ try {
 }
 
 export const connectDB = async (): Promise<void> => {
+  // Reuse active connection if already connected
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
   const mongoURI = process.env.MONGODB_URI;
 
   if (!mongoURI) {
@@ -18,7 +22,7 @@ export const connectDB = async (): Promise<void> => {
 
   try {
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 10000
+      serverSelectionTimeoutMS: 15000
     });
     console.log(`🍃 MongoDB Connected: ${conn.connection.host} / ${conn.connection.name}`);
   } catch (error) {
@@ -28,5 +32,7 @@ export const connectDB = async (): Promise<void> => {
 };
 
 export const disconnectDB = async (): Promise<void> => {
-  await mongoose.disconnect();
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
 };

@@ -5,6 +5,7 @@ import healthRouter from './routes/health.routes.js';
 import meetingRouter from './routes/meeting.routes.js';
 import recordingRouter from './routes/recording.routes.js';
 import transcriptRouter from './routes/transcript.routes.js';
+import summaryRouter from './routes/summary.routes.js';
 
 const app: Application = express();
 
@@ -21,6 +22,7 @@ app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/meetings', meetingRouter);
 app.use('/api/v1/recordings', recordingRouter);
 app.use('/api/v1/transcripts', transcriptRouter);
+app.use('/api/v1/summaries', summaryRouter);
 
 // Root route
 app.get('/', (req: Request, res: Response) => {
@@ -31,7 +33,8 @@ app.get('/', (req: Request, res: Response) => {
     healthCheck: '/api/v1/health',
     meetingsAPI: '/api/v1/meetings',
     recordingsAPI: '/api/v1/recordings',
-    transcriptsAPI: '/api/v1/transcripts'
+    transcriptsAPI: '/api/v1/transcripts',
+    summariesAPI: '/api/v1/summaries'
   });
 });
 

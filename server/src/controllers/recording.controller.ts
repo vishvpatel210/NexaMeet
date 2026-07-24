@@ -76,7 +76,11 @@ export const uploadRecording = async (req: Request, res: Response) => {
 export const getAudioFile = async (req: Request, res: Response) => {
   try {
     const { filename } = req.params;
-    const filePath = path.join(process.cwd(), 'uploads', filename);
+    let filePath = path.join(process.cwd(), 'uploads', filename);
+
+    if (!fs.existsSync(filePath)) {
+      filePath = path.join(process.cwd(), 'uploads', 'recordings', filename);
+    }
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Audio file not found' });

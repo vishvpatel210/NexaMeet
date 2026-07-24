@@ -7,6 +7,8 @@ export interface IRecordingDocument extends Document {
   sampleRate: number;
   channels: number;
   format: 'wav' | 'opus';
+  sttStatus: 'pending' | 'completed' | 'failed';
+  errorMessage?: string;
   createdAt: Date;
 }
 
@@ -17,7 +19,9 @@ const RecordingSchema = new Schema<IRecordingDocument>(
     durationSeconds: { type: Number, default: 0 },
     sampleRate: { type: Number, default: 16000 },
     channels: { type: Number, default: 1 },
-    format: { type: String, enum: ['wav', 'opus'], default: 'wav' }
+    format: { type: String, enum: ['wav', 'opus'], default: 'wav' },
+    sttStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
+    errorMessage: { type: String, default: '' }
   },
   {
     timestamps: { createdAt: true, updatedAt: false }

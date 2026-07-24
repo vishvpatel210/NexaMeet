@@ -20,6 +20,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState<boolean>(false);
+  const [targetRecordingMeetingId, setTargetRecordingMeetingId] = useState<string | undefined>(undefined);
   const [backendConnected, setBackendConnected] = useState<boolean>(true);
 
   const fetchMeetings = async () => {
@@ -48,6 +49,7 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
         e.preventDefault();
+        setTargetRecordingMeetingId(undefined);
         setIsRecordingModalOpen((prev) => !prev);
       }
     };
@@ -87,7 +89,13 @@ export default function App() {
   };
 
   const handleRecordForCalendarTask = (task: IMeeting) => {
-    setSelectedMeeting(task);
+    const taskId = task.id || (task as any)._id;
+    setTargetRecordingMeetingId(taskId);
+    setIsRecordingModalOpen(true);
+  };
+
+  const handleOpenRecordingModalForMeeting = (mId: string) => {
+    setTargetRecordingMeetingId(mId);
     setIsRecordingModalOpen(true);
   };
 
@@ -105,7 +113,10 @@ export default function App() {
           setActiveCategory(cat);
           setSelectedMeeting(null);
         }}
-        onOpenNewMeeting={() => setIsRecordingModalOpen(true)}
+        onOpenNewMeeting={() => {
+          setTargetRecordingMeetingId(undefined);
+          setIsRecordingModalOpen(true);
+        }}
       />
 
       {/* Main Content Area */}
@@ -116,7 +127,7 @@ export default function App() {
             meeting={selectedMeeting}
             onBack={() => setSelectedMeeting(null)}
             onToggleStar={handleToggleStar}
-            onOpenRecordingModal={() => setIsRecordingModalOpen(true)}
+            onOpenRecordingModalForMeeting={handleOpenRecordingModalForMeeting}
           />
         ) : activeView === 'calendar' ? (
           /* Task Calendar Workspace */
@@ -185,6 +196,7 @@ export default function App() {
       {/* Live Recording Modal Overlay */}
       <LiveRecordingModal
         isOpen={isRecordingModalOpen}
+        targetMeetingId={targetRecordingMeetingId}
         onClose={() => setIsRecordingModalOpen(false)}
         onRecordingSaved={() => {
           fetchMeetings();

@@ -4,11 +4,17 @@ import { ApiService } from '../services/api';
 
 interface LiveRecordingModalProps {
   isOpen: boolean;
+  targetMeetingId?: string;
   onClose: () => void;
   onRecordingSaved: () => void;
 }
 
-export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({ isOpen, onClose, onRecordingSaved }) => {
+export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({
+  isOpen,
+  targetMeetingId,
+  onClose,
+  onRecordingSaved
+}) => {
   const [recordingTitle, setRecordingTitle] = useState('');
   const [isRecording, setIsRecording] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
@@ -135,28 +141,35 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({ isOpen, 
     stopAudioCapture();
 
     try {
-      // Create new meeting entry for this recording
-      const title = recordingTitle.trim() || `Recording ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-      const meeting = await ApiService.createMeeting({
-        title,
-        category: 'Work'
-      });
+      let activeMeetingId = targetMeetingId;
 
-      if (meeting) {
-        const meetingId = meeting.id || (meeting as any)._id;
+      // If no existing meeting container is targeted, create a new meeting folder first
+      if (!activeMeetingId) {
+        const title = recordingTitle.trim() || `Meeting ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        const newMeeting = await ApiService.createMeeting({
+          title,
+          category: 'Work',
+          status: 'completed'
+        });
 
+        if (newMeeting) {
+          activeMeetingId = newMeeting.id || (newMeeting as any)._id;
+        }
+      }
+
+      if (activeMeetingId) {
         // Convert audio chunks to Blob / ArrayBuffer
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         const arrayBuffer = await audioBlob.arrayBuffer();
 
-        // Upload audio recording stream via IPC or API
+        // Upload audio recording stream via IPC or API attached directly to activeMeetingId
         if (window.nexameetAPI?.uploadAudioStream) {
-          await window.nexameetAPI.uploadAudioStream(meetingId, arrayBuffer, 'wav');
+          await window.nexameetAPI.uploadAudioStream(activeMeetingId, arrayBuffer, 'wav');
         } else {
           // Fallback direct HTTP POST fetch
           const formData = new FormData();
           formData.append('audio', audioBlob, 'recording.wav');
-          formData.append('meetingId', meetingId);
+          formData.append('meetingId', activeMeetingId);
           formData.append('durationSeconds', secondsElapsed.toString());
 
           await fetch('http://localhost:5000/api/v1/recordings/upload', {
@@ -223,25 +236,27 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({ isOpen, 
           </button>
         </div>
 
-        {/* Recording Title Input */}
-        <input
-          type="text"
-          placeholder="Recording Title (optional)..."
-          value={recordingTitle}
-          onChange={(e) => setRecordingTitle(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.65rem 1rem',
-            backgroundColor: '#090D16',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '12px',
-            color: '#F8FAFC',
-            fontSize: '0.9rem',
-            textAlign: 'center',
-            outline: 'none',
-            marginBottom: '2rem'
-          }}
-        />
+        {/* Recording Title Input (Only show if creating new meeting) */}
+        {!targetMeetingId && (
+          <input
+            type="text"
+            placeholder="Meeting Title (optional)..."
+            value={recordingTitle}
+            onChange={(e) => setRecordingTitle(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.65rem 1rem',
+              backgroundColor: '#090D16',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              color: '#F8FAFC',
+              fontSize: '0.9rem',
+              textAlign: 'center',
+              outline: 'none',
+              marginBottom: '2rem'
+            }}
+          />
+        )}
 
         {/* Central Pulse Orb */}
         <div style={{
@@ -255,7 +270,8 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({ isOpen, 
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: isPaused ? '0 0 20px rgba(245, 158, 11, 0.4)' : '0 0 30px rgba(244, 63, 94, 0.5)',
-          marginBottom: '1.5rem'
+          marginBottom: '1.5rem',
+          marginTop: targetMeetingId ? '1rem' : '0'
         }}>
           <Mic size={36} color="#FFFFFF" />
         </div>

@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Volume2, FileText, Sparkles, CheckSquare, Square, Star, Plus, Trash2, Clock } from 'lucide-react';
-export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordingModal }) => {
+import { ArrowLeft, Play, Pause, Volume2, FileText, Sparkles, CheckSquare, Square, Star, Plus, Trash2, Clock, RefreshCw, Mic } from 'lucide-react';
+export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordingModalForMeeting }) => {
     const [recordings, setRecordings] = useState([]);
     const [transcript, setTranscript] = useState(null);
     const [summary, setSummary] = useState(null);
@@ -12,6 +12,7 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [loadingAI, setLoadingAI] = useState(false);
+    const [retryingRecordingId, setRetryingRecordingId] = useState(null);
     const [selectedTemplate, setSelectedTemplate] = useState('executive-brief');
     const [rawUserNotes, setRawUserNotes] = useState('');
     const audioRef = useRef(null);
@@ -27,7 +28,15 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                     setSummary(json.data.summary || null);
                     setActionItems(json.data.actionItems || []);
                     if (json.data.recordings && json.data.recordings.length > 0) {
-                        setSelectedRecording(json.data.recordings[0]);
+                        if (!selectedRecording) {
+                            setSelectedRecording(json.data.recordings[0]);
+                        }
+                        else {
+                            // Update selected recording reference
+                            const updatedSel = json.data.recordings.find((r) => (r.id || r._id) === (selectedRecording.id || selectedRecording._id));
+                            if (updatedSel)
+                                setSelectedRecording(updatedSel);
+                        }
                     }
                     else {
                         setSelectedRecording(null);
@@ -80,10 +89,29 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                     setSelectedRecording(remaining.length > 0 ? remaining[0] : null);
                     setIsPlaying(false);
                 }
+                fetchMeetingDetails();
             }
         }
         catch (err) {
             console.error('Failed to delete audio recording:', err);
+        }
+    };
+    const handleRetryTranscription = async (recId, e) => {
+        e.stopPropagation();
+        setRetryingRecordingId(recId);
+        try {
+            const res = await fetch(`http://localhost:5000/api/v1/transcripts/retry/${recId}`, {
+                method: 'POST'
+            });
+            if (res.ok) {
+                await fetchMeetingDetails();
+            }
+        }
+        catch (err) {
+            console.error('Failed to retry transcription:', err);
+        }
+        finally {
+            setRetryingRecordingId(null);
         }
     };
     const handleGenerateAISummary = async () => {
@@ -135,7 +163,7 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
         const secs = Math.floor(totalSecs % 60);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
-    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#090D16', overflow: 'hidden', userSelect: 'none' }, children: [_jsxs("div", { style: {
+    return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#090D16', overflow: 'hidden', userSelect: 'none', position: 'relative' }, children: [_jsxs("div", { style: {
                     padding: '1.25rem 2rem',
                     backgroundColor: '#0F172A',
                     borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
@@ -160,8 +188,8 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                                     borderRadius: '6px',
                                                     backgroundColor: '#1E293B',
                                                     color: '#06B6D4'
-                                                }, children: meeting.category }))] }), _jsx("div", { style: { fontSize: '0.8rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.2rem' }, children: _jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: '0.3rem' }, children: [_jsx(Clock, { size: 12 }), " ", new Date(meeting.createdAt || Date.now()).toLocaleDateString()] }) })] })] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem' }, children: [_jsx("button", { onClick: (e) => onToggleStar(meetingId, meeting.isStarred, e), style: { background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem' }, children: _jsx(Star, { size: 20, color: meeting.isStarred ? '#F59E0B' : '#475569', fill: meeting.isStarred ? '#F59E0B' : 'none' }) }), _jsxs("button", { onClick: onOpenRecordingModal, style: {
-                                    padding: '0.5rem 1rem',
+                                                }, children: meeting.category }))] }), _jsx("div", { style: { fontSize: '0.8rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.2rem' }, children: _jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: '0.3rem' }, children: [_jsx(Clock, { size: 12 }), " ", new Date(meeting.createdAt || Date.now()).toLocaleDateString()] }) })] })] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem' }, children: [_jsx("button", { onClick: (e) => onToggleStar(meetingId, meeting.isStarred, e), style: { background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem' }, children: _jsx(Star, { size: 20, color: meeting.isStarred ? '#F59E0B' : '#475569', fill: meeting.isStarred ? '#F59E0B' : 'none' }) }), _jsxs("button", { onClick: () => onOpenRecordingModalForMeeting(meetingId), style: {
+                                    padding: '0.55rem 1.1rem',
                                     borderRadius: '10px',
                                     border: 'none',
                                     background: 'linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%)',
@@ -171,18 +199,20 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '0.4rem',
-                                    cursor: 'pointer'
-                                }, children: [_jsx(Plus, { size: 16 }), "Add Recording"] })] })] }), _jsxs("div", { style: { flex: 1, display: 'flex', overflow: 'hidden' }, children: [_jsxs("div", { style: {
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 14px rgba(6, 182, 212, 0.35)'
+                                }, children: [_jsx(Plus, { size: 16 }), "Add Follow-up Recording"] })] })] }), _jsxs("div", { style: { flex: 1, display: 'flex', overflow: 'hidden', paddingBottom: '70px' }, children: [_jsxs("div", { style: {
                             flex: '1.1',
                             borderRight: '1px solid rgba(255, 255, 255, 0.08)',
                             display: 'flex',
                             flexDirection: 'column',
                             backgroundColor: '#090D16'
-                        }, children: [_jsxs("div", { style: { padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }, children: [_jsxs("div", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }, children: ["Recordings (", recordings.length, ")"] }), _jsx("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }, children: recordings.length === 0 ? (_jsx("div", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "No speech recordings added yet. Click \"+ Add Recording\"." })) : (recordings.map((rec, idx) => {
+                        }, children: [_jsxs("div", { style: { padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }, children: [_jsx("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }, children: _jsxs("div", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }, children: ["Recordings Carousel (", recordings.length, ")"] }) }), _jsx("div", { style: { display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }, children: recordings.length === 0 ? (_jsx("div", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "No recordings attached to this meeting container. Click \"+ Add Follow-up Recording\"." })) : (recordings.map((rec, idx) => {
                                             const recId = rec.id || rec._id;
                                             const isSel = selectedRecording && (selectedRecording.id || selectedRecording._id) === recId;
+                                            const sttStatus = rec.sttStatus || 'completed';
                                             return (_jsxs("div", { onClick: () => setSelectedRecording(rec), style: {
-                                                    padding: '0.5rem 0.9rem',
+                                                    padding: '0.55rem 0.9rem',
                                                     borderRadius: '10px',
                                                     backgroundColor: isSel ? '#1E293B' : '#151D2F',
                                                     border: isSel ? '1px solid #06B6D4' : '1px solid rgba(255, 255, 255, 0.08)',
@@ -192,16 +222,28 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                                     cursor: 'pointer',
                                                     fontSize: '0.85rem',
                                                     color: isSel ? '#F8FAFC' : '#94A3B8'
-                                                }, children: [_jsx("div", { style: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' } }), _jsxs("span", { children: ["Recording ", idx + 1] }), _jsx("span", { style: { fontSize: '0.75rem', color: '#64748B' }, children: formatTimer(rec.durationSeconds || 10) }), _jsx("button", { onClick: (e) => handleDeleteRecording(recId, e), title: "Delete Specific Speech", style: {
+                                                }, children: [_jsx("div", { style: {
+                                                            width: '6px',
+                                                            height: '6px',
+                                                            borderRadius: '50%',
+                                                            backgroundColor: sttStatus === 'completed' ? '#10B981' : sttStatus === 'failed' ? '#F43F5E' : '#F59E0B'
+                                                        } }), _jsxs("span", { children: ["Recording ", idx + 1] }), _jsx("span", { style: { fontSize: '0.75rem', color: '#64748B' }, children: formatTimer(rec.durationSeconds || 10) }), _jsx("button", { onClick: (e) => handleRetryTranscription(recId, e), title: "Retry Speech-to-Text Transcription", disabled: retryingRecordingId === recId, style: {
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: retryingRecordingId === recId ? '#06B6D4' : '#64748B',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            padding: '0.1rem 0.2rem',
+                                                            marginLeft: '0.2rem'
+                                                        }, children: _jsx(RefreshCw, { size: 13, className: retryingRecordingId === recId ? 'spin' : '' }) }), _jsx("button", { onClick: (e) => handleDeleteRecording(recId, e), title: "Delete Specific Speech", style: {
                                                             background: 'none',
                                                             border: 'none',
                                                             color: '#64748B',
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            padding: '0.1rem 0.2rem',
-                                                            marginLeft: '0.2rem',
-                                                            borderRadius: '4px'
+                                                            padding: '0.1rem 0.2rem'
                                                         }, onMouseEnter: (e) => (e.currentTarget.style.color = '#F43F5E'), onMouseLeave: (e) => (e.currentTarget.style.color = '#64748B'), children: _jsx(Trash2, { size: 13 }) })] }, recId));
                                         })) }), selectedRecording && (_jsxs("div", { style: {
                                             marginTop: '1rem',
@@ -273,12 +315,12 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                             color: activeTab === 'transcription' ? '#06B6D4' : '#64748B',
                                             cursor: 'pointer',
                                             borderBottom: activeTab === 'transcription' ? '2px solid #06B6D4' : '2px solid transparent'
-                                        }, children: "\uD83C\uDF99\uFE0F Verbatim Transcript" })] }), _jsx("div", { style: { flex: 1, padding: '1.5rem', overflowY: 'auto' }, children: activeTab === 'summary' ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '1.5rem' }, children: [_jsxs("div", { style: {
+                                        }, children: "\uD83C\uDF99\uFE0F Merged Verbatim Transcript" })] }), _jsx("div", { style: { flex: 1, padding: '1.5rem', overflowY: 'auto' }, children: activeTab === 'summary' ? (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '1.5rem' }, children: [_jsxs("div", { style: {
                                                 backgroundColor: '#151D2F',
                                                 borderRadius: '14px',
                                                 border: '1px solid rgba(255, 255, 255, 0.08)',
                                                 padding: '1.25rem 1.5rem'
-                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#A855F7', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(FileText, { size: 18 }), "Executive Summary"] }), _jsx("p", { style: { color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.6 }, children: summary?.executiveSummary || 'No summary generated yet. Click "Enhance with AI" to generate structured meeting intelligence.' })] }), summary?.keyPoints && summary.keyPoints.length > 0 && (_jsxs("div", { style: {
+                                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#A855F7', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }, children: [_jsx(FileText, { size: 18 }), "Executive Summary"] }), _jsx("p", { style: { color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.6 }, children: summary?.executiveSummary || 'No summary generated yet. Click "+ Add Follow-up Recording" or "Enhance with AI" to generate structured meeting intelligence.' })] }), summary?.keyPoints && summary.keyPoints.length > 0 && (_jsxs("div", { style: {
                                                 backgroundColor: '#151D2F',
                                                 borderRadius: '14px',
                                                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -306,13 +348,39 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                                                         textDecoration: isDone ? 'line-through' : 'none'
                                                                     }, children: item.taskDescription }), item.assignee && (_jsx("span", { style: { fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }, children: item.assignee }))] }, itemId));
                                                     }) }))] })] })) : (
-                                /* Transcription View */
-                                _jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '1rem' }, children: !transcript || !transcript.segments || transcript.segments.length === 0 ? (_jsx("div", { style: { textAlign: 'center', padding: '3rem', color: '#64748B', fontSize: '0.9rem' }, children: "No transcript generated for this meeting." })) : (transcript.segments.map((seg, idx) => (_jsxs("div", { onClick: () => handleSeek(seg.startTime), style: {
+                                /* Merged Verbatim Transcription View */
+                                _jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '1rem' }, children: !transcript || !transcript.segments || transcript.segments.length === 0 ? (_jsx("div", { style: { textAlign: 'center', padding: '3rem', color: '#64748B', fontSize: '0.9rem' }, children: "No transcript generated yet for this meeting." })) : (transcript.segments.map((seg, idx) => (_jsxs("div", { onClick: () => handleSeek(seg.startTime), style: {
                                             backgroundColor: '#151D2F',
                                             borderRadius: '12px',
                                             border: '1px solid rgba(255, 255, 255, 0.06)',
                                             padding: '1rem 1.25rem',
                                             cursor: 'pointer',
                                             transition: 'border-color 0.15s ease'
-                                        }, onMouseEnter: (e) => (e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.3)'), onMouseLeave: (e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'), children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }, children: [_jsx("span", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#06B6D4' }, children: seg.speakerLabel || `Speaker ${idx + 1}` }), _jsxs("span", { style: { fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#64748B' }, children: [formatTimer(seg.startTime), " - ", formatTimer(seg.endTime)] })] }), _jsx("p", { style: { color: '#E2E8F0', fontSize: '0.88rem', lineHeight: 1.5 }, children: seg.content })] }, seg.id || idx)))) })) })] })] })] }));
+                                        }, onMouseEnter: (e) => (e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.3)'), onMouseLeave: (e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'), children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }, children: [_jsx("span", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#06B6D4' }, children: seg.speakerLabel || `Speaker ${idx + 1}` }), _jsxs("span", { style: { fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#64748B' }, children: [formatTimer(seg.startTime), " - ", formatTimer(seg.endTime)] })] }), _jsx("p", { style: { color: '#E2E8F0', fontSize: '0.88rem', lineHeight: 1.5 }, children: seg.content })] }, seg.id || idx)))) })) })] })] }), _jsx("div", { style: {
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '64px',
+                    backgroundColor: '#0F172A',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 2rem',
+                    zIndex: 100
+                }, children: _jsxs("button", { onClick: () => onOpenRecordingModalForMeeting(meetingId), style: {
+                        padding: '0.65rem 2rem',
+                        borderRadius: '24px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+                        color: '#FFFFFF',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 20px rgba(244, 63, 94, 0.4)'
+                    }, children: [_jsx(Mic, { size: 18, fill: "#FFFFFF" }), "Start Recording into Current Meeting"] }) })] }));
 };

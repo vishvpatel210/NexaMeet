@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState, useRef } from 'react';
 import { X, Mic, Pause, Play, Square } from 'lucide-react';
 import { ApiService } from '../services/api';
-export const LiveRecordingModal = ({ isOpen, onClose, onRecordingSaved }) => {
+export const LiveRecordingModal = ({ isOpen, targetMeetingId, onClose, onRecordingSaved }) => {
     const [recordingTitle, setRecordingTitle] = useState('');
     const [isRecording, setIsRecording] = useState(true);
     const [isPaused, setIsPaused] = useState(false);
@@ -111,26 +111,32 @@ export const LiveRecordingModal = ({ isOpen, onClose, onRecordingSaved }) => {
         setSaving(true);
         stopAudioCapture();
         try {
-            // Create new meeting entry for this recording
-            const title = recordingTitle.trim() || `Recording ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-            const meeting = await ApiService.createMeeting({
-                title,
-                category: 'Work'
-            });
-            if (meeting) {
-                const meetingId = meeting.id || meeting._id;
+            let activeMeetingId = targetMeetingId;
+            // If no existing meeting container is targeted, create a new meeting folder first
+            if (!activeMeetingId) {
+                const title = recordingTitle.trim() || `Meeting ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                const newMeeting = await ApiService.createMeeting({
+                    title,
+                    category: 'Work',
+                    status: 'completed'
+                });
+                if (newMeeting) {
+                    activeMeetingId = newMeeting.id || newMeeting._id;
+                }
+            }
+            if (activeMeetingId) {
                 // Convert audio chunks to Blob / ArrayBuffer
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
                 const arrayBuffer = await audioBlob.arrayBuffer();
-                // Upload audio recording stream via IPC or API
+                // Upload audio recording stream via IPC or API attached directly to activeMeetingId
                 if (window.nexameetAPI?.uploadAudioStream) {
-                    await window.nexameetAPI.uploadAudioStream(meetingId, arrayBuffer, 'wav');
+                    await window.nexameetAPI.uploadAudioStream(activeMeetingId, arrayBuffer, 'wav');
                 }
                 else {
                     // Fallback direct HTTP POST fetch
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'recording.wav');
-                    formData.append('meetingId', meetingId);
+                    formData.append('meetingId', activeMeetingId);
                     formData.append('durationSeconds', secondsElapsed.toString());
                     await fetch('http://localhost:5000/api/v1/recordings/upload', {
                         method: 'POST',
@@ -181,7 +187,7 @@ export const LiveRecordingModal = ({ isOpen, onClose, onRecordingSaved }) => {
                                         borderRadius: '50%',
                                         backgroundColor: '#F43F5E',
                                         boxShadow: '0 0 10px #F43F5E'
-                                    } }), isPaused ? 'PAUSED' : 'LIVE RECORDING'] }), _jsx("button", { onClick: onClose, style: { background: 'none', border: 'none', color: '#64748B', cursor: 'pointer' }, children: _jsx(X, { size: 20 }) })] }), _jsx("input", { type: "text", placeholder: "Recording Title (optional)...", value: recordingTitle, onChange: (e) => setRecordingTitle(e.target.value), style: {
+                                    } }), isPaused ? 'PAUSED' : 'LIVE RECORDING'] }), _jsx("button", { onClick: onClose, style: { background: 'none', border: 'none', color: '#64748B', cursor: 'pointer' }, children: _jsx(X, { size: 20 }) })] }), !targetMeetingId && (_jsx("input", { type: "text", placeholder: "Meeting Title (optional)...", value: recordingTitle, onChange: (e) => setRecordingTitle(e.target.value), style: {
                         width: '100%',
                         padding: '0.65rem 1rem',
                         backgroundColor: '#090D16',
@@ -192,7 +198,7 @@ export const LiveRecordingModal = ({ isOpen, onClose, onRecordingSaved }) => {
                         textAlign: 'center',
                         outline: 'none',
                         marginBottom: '2rem'
-                    } }), _jsx("div", { style: {
+                    } })), _jsx("div", { style: {
                         width: '80px',
                         height: '80px',
                         borderRadius: '50%',
@@ -203,7 +209,8 @@ export const LiveRecordingModal = ({ isOpen, onClose, onRecordingSaved }) => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: isPaused ? '0 0 20px rgba(245, 158, 11, 0.4)' : '0 0 30px rgba(244, 63, 94, 0.5)',
-                        marginBottom: '1.5rem'
+                        marginBottom: '1.5rem',
+                        marginTop: targetMeetingId ? '1rem' : '0'
                     }, children: _jsx(Mic, { size: 36, color: "#FFFFFF" }) }), _jsx("div", { style: {
                         display: 'flex',
                         alignItems: 'flex-end',

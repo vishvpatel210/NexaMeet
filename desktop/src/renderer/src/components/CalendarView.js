@@ -44,6 +44,7 @@ export const CalendarView = ({ meetings, onRefresh, onRecordForMeeting, onSelect
         const [hours, minutes] = taskTime.split(':').map(Number);
         const scheduledDate = new Date(selectedDate);
         scheduledDate.setHours(hours || 12, minutes || 0, 0, 0);
+        // Create empty meeting folder for scheduled task
         await ApiService.createMeeting({
             title: taskTitle,
             category: taskCategory,
@@ -137,7 +138,7 @@ export const CalendarView = ({ meetings, onRefresh, onRecordForMeeting, onSelect
                                     alignItems: 'center',
                                     gap: '0.35rem',
                                     cursor: 'pointer'
-                                }, children: [_jsx(Plus, { size: 16 }), "Schedule Task"] })] }), _jsx("div", { style: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }, children: selectedDateMeetings.length === 0 ? (_jsx("div", { style: { padding: '3rem 1.5rem', textAlign: 'center', color: '#64748B', fontSize: '0.9rem' }, children: "No tasks scheduled for this date. Click \"+ Schedule Task\" above to add a meeting or discussion item." })) : (selectedDateMeetings.map((task) => {
+                                }, children: [_jsx(Plus, { size: 16 }), "Schedule Task"] })] }), _jsx("div", { style: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }, children: selectedDateMeetings.length === 0 ? (_jsx("div", { style: { padding: '3rem 1.5rem', textAlign: 'center', color: '#64748B', fontSize: '0.9rem' }, children: "No tasks scheduled for this date. Click \"+ Schedule Task\" above to create an empty meeting folder." })) : (selectedDateMeetings.map((task) => {
                             const taskId = task.id || task._id;
                             const startTime = task.scheduledStart
                                 ? new Date(task.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -150,7 +151,7 @@ export const CalendarView = ({ meetings, onRefresh, onRecordForMeeting, onSelect
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: '0.75rem'
-                                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem' }, children: [_jsxs("span", { style: { fontSize: '0.8rem', color: '#06B6D4', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '0.3rem' }, children: [_jsx(Clock, { size: 14 }), " ", startTime] }), _jsx("span", { style: { fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }, children: task.category || 'Work' })] }), task.status === 'completed' ? (_jsxs("span", { style: { fontSize: '0.75rem', color: '#10B981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }, children: [_jsx(CheckCircle2, { size: 14 }), " Summarized"] })) : (_jsx("span", { style: { fontSize: '0.75rem', color: '#F59E0B', fontWeight: 500 }, children: "\u25CF Scheduled" }))] }), _jsx("h4", { onClick: () => onSelectMeeting(task), style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 600, color: '#F8FAFC', cursor: 'pointer' }, children: task.title }), _jsxs("button", { onClick: () => onRecordForMeeting(task), style: {
+                                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem' }, children: [_jsxs("span", { style: { fontSize: '0.8rem', color: '#06B6D4', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '0.3rem' }, children: [_jsx(Clock, { size: 14 }), " ", startTime] }), _jsx("span", { style: { fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }, children: task.category || 'Work' })] }), task.status === 'completed' ? (_jsxs("span", { style: { fontSize: '0.75rem', color: '#10B981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }, children: [_jsx(CheckCircle2, { size: 14 }), " Summarized"] })) : (_jsx("span", { style: { fontSize: '0.75rem', color: '#F59E0B', fontWeight: 500 }, children: "\u25CF Scheduled Empty Folder" }))] }), _jsx("h4", { onClick: () => onSelectMeeting(task), style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 600, color: '#F8FAFC', cursor: 'pointer' }, children: task.title }), _jsxs("button", { onClick: () => onRecordForMeeting(task), style: {
                                             width: '100%',
                                             padding: '0.6rem',
                                             borderRadius: '10px',
@@ -165,7 +166,7 @@ export const CalendarView = ({ meetings, onRefresh, onRecordForMeeting, onSelect
                                             gap: '0.5rem',
                                             cursor: 'pointer',
                                             transition: 'all 0.15s ease'
-                                        }, children: [_jsx(Mic, { size: 16, color: "#F43F5E" }), "Record Speech & Summarize"] })] }, taskId));
+                                        }, children: [_jsx(Mic, { size: 16, color: "#F43F5E" }), "Record Speech into Meeting Folder"] })] }, taskId));
                         })) })] }), isTaskModalOpen && (_jsx("div", { style: {
                     position: 'fixed',
                     inset: 0,
@@ -182,7 +183,7 @@ export const CalendarView = ({ meetings, onRefresh, onRecordForMeeting, onSelect
                         borderRadius: '20px',
                         padding: '2rem',
                         boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
-                    }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }, children: [_jsx(Sparkles, { size: 20, color: "#06B6D4" }), _jsxs("h3", { style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.2rem', fontWeight: 700, color: '#F8FAFC' }, children: ["Schedule Task for ", selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })] })] }), _jsxs("form", { onSubmit: handleCreateTask, style: { display: 'flex', flexDirection: 'column', gap: '1rem' }, children: [_jsxs("div", { children: [_jsx("label", { style: { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94A3B8', marginBottom: '0.35rem' }, children: "Task / Meeting Title *" }), _jsx("input", { type: "text", required: true, placeholder: "e.g. Architecture Sprint Review", value: taskTitle, onChange: (e) => setTaskTitle(e.target.value), style: {
+                    }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }, children: [_jsx(Sparkles, { size: 20, color: "#06B6D4" }), _jsxs("h3", { style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.2rem', fontWeight: 700, color: '#F8FAFC' }, children: ["Schedule Task Folder for ", selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })] })] }), _jsxs("form", { onSubmit: handleCreateTask, style: { display: 'flex', flexDirection: 'column', gap: '1rem' }, children: [_jsxs("div", { children: [_jsx("label", { style: { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94A3B8', marginBottom: '0.35rem' }, children: "Task / Meeting Title *" }), _jsx("input", { type: "text", required: true, placeholder: "e.g. Architecture Sprint Review", value: taskTitle, onChange: (e) => setTaskTitle(e.target.value), style: {
                                                 width: '100%',
                                                 padding: '0.65rem',
                                                 backgroundColor: '#090D16',
@@ -224,5 +225,5 @@ export const CalendarView = ({ meetings, onRefresh, onRecordForMeeting, onSelect
                                                 color: '#FFFFFF',
                                                 fontWeight: 600,
                                                 cursor: 'pointer'
-                                            }, children: "Save Task" })] })] })] }) }))] }));
+                                            }, children: "Save Meeting Folder" })] })] })] }) }))] }));
 };

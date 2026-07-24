@@ -7,7 +7,7 @@ import { STTEngineType } from '../../../shared/types/index.js';
 
 export class WhisperService {
   /**
-   * Transcribe an audio file associated with a recording and persist transcript to MongoDB
+   * Transcribe an audio file associated with a recording and append transcript segments to the meeting transcript
    */
   static async transcribeRecording(recordingId: string, options?: { language?: string; sttEngine?: STTEngineType }): Promise<ITranscriptDocument> {
     const recording = await Recording.findById(recordingId);
@@ -17,40 +17,68 @@ export class WhisperService {
     }
 
     if (!fs.existsSync(recording.filePath)) {
-      throw new Error(`Audio file not found on disk at path: ${recording.filePath}`);
+      recording.sttStatus = 'failed';
+      recording.errorMessage = `Audio file not found on disk: ${recording.filePath}`;
+      await recording.save();
+      throw new Error(recording.errorMessage);
     }
+
+    recording.sttStatus = 'pending';
+    await recording.save();
 
     const sttEngine: STTEngineType = options?.sttEngine || (process.env.OPENAI_API_KEY ? 'whisper-api' : 'whisper-local');
     const language = options?.language || 'en';
 
-    let segments: ITranscriptSegmentDoc[] = [];
+    let rawSegments: ITranscriptSegmentDoc[] = [];
 
-    // If OpenAI API Key exists, use OpenAI Whisper API
-    if (process.env.OPENAI_API_KEY && sttEngine === 'whisper-api') {
-      segments = await this.transcribeWithOpenAI(recording.filePath);
-    } else {
-      // Offline fallback speech processing engine for local dev and automated tests
-      segments = await this.processLocalWhisperSTT(recording.filePath, recording.durationSeconds);
+    try {
+      if (process.env.OPENAI_API_KEY && sttEngine === 'whisper-api') {
+        rawSegments = await this.transcribeWithOpenAI(recording.filePath);
+      } else {
+        rawSegments = await this.processLocalWhisperSTT(recording.filePath, recording.durationSeconds);
+      }
+
+      // Check existing transcript for this meeting to compute continuous timestamp offset
+      let transcript = await Transcript.findOne({ meetingId: recording.meetingId });
+      let timeOffset = 0;
+
+      if (transcript && transcript.segments.length > 0) {
+        timeOffset = Math.max(...transcript.segments.map(s => s.endTime || 0));
+      }
+
+      // Shift timestamps for appended segments from follow-up recordings
+      const shiftedSegments = rawSegments.map(seg => ({
+        startTime: Number((seg.startTime + timeOffset).toFixed(1)),
+        endTime: Number((seg.endTime + timeOffset).toFixed(1)),
+        speakerLabel: seg.speakerLabel,
+        content: seg.content
+      }));
+
+      if (transcript) {
+        transcript.segments.push(...(shiftedSegments as any));
+        transcript.sttEngine = sttEngine;
+        transcript.language = language;
+        await transcript.save();
+      } else {
+        transcript = await Transcript.create({
+          meetingId: recording.meetingId,
+          sttEngine,
+          language,
+          segments: shiftedSegments
+        });
+      }
+
+      recording.sttStatus = 'completed';
+      recording.errorMessage = '';
+      await recording.save();
+
+      return transcript;
+    } catch (err: any) {
+      recording.sttStatus = 'failed';
+      recording.errorMessage = err.message || 'Transcription failed';
+      await recording.save();
+      throw err;
     }
-
-    // Check if transcript already exists for this meeting
-    let transcript = await Transcript.findOne({ meetingId: recording.meetingId });
-
-    if (transcript) {
-      transcript.segments.push(...segments);
-      transcript.sttEngine = sttEngine;
-      transcript.language = language;
-      await transcript.save();
-    } else {
-      transcript = await Transcript.create({
-        meetingId: recording.meetingId,
-        sttEngine,
-        language,
-        segments
-      });
-    }
-
-    return transcript;
   }
 
   /**
@@ -118,13 +146,13 @@ export class WhisperService {
         startTime: 0.0,
         endTime: midPoint,
         speakerLabel: 'Speaker 1',
-        content: `Welcome everyone to the meeting discussion recorded in audio file ${filename}.`
+        content: `Welcome everyone to the discussion clip ${filename}.`
       },
       {
         startTime: midPoint,
         endTime: Number(duration.toFixed(1)),
         speakerLabel: 'Speaker 2',
-        content: 'Let us review the architectural updates and action items for this project release.'
+        content: 'Reviewing key architectural objectives and project action items.'
       }
     ];
   }

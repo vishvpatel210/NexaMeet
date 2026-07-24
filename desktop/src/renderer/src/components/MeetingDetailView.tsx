@@ -19,21 +19,24 @@ import {
   Star,
   Plus,
   Trash2,
-  Clock
+  Clock,
+  RefreshCw,
+  Mic,
+  AlertCircle
 } from 'lucide-react';
 
 interface MeetingDetailViewProps {
   meeting: IMeeting;
   onBack: () => void;
   onToggleStar: (meetingId: string, currentStarred: boolean, e: React.MouseEvent) => void;
-  onOpenRecordingModal: () => void;
+  onOpenRecordingModalForMeeting: (meetingId: string) => void;
 }
 
 export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
   meeting,
   onBack,
   onToggleStar,
-  onOpenRecordingModal
+  onOpenRecordingModalForMeeting
 }) => {
   const [recordings, setRecordings] = useState<IRecording[]>([]);
   const [transcript, setTranscript] = useState<ITranscript | null>(null);
@@ -45,6 +48,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [loadingAI, setLoadingAI] = useState<boolean>(false);
+  const [retryingRecordingId, setRetryingRecordingId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('executive-brief');
   const [rawUserNotes, setRawUserNotes] = useState<string>('');
 
@@ -63,7 +67,13 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
           setActionItems(json.data.actionItems || []);
 
           if (json.data.recordings && json.data.recordings.length > 0) {
-            setSelectedRecording(json.data.recordings[0]);
+            if (!selectedRecording) {
+              setSelectedRecording(json.data.recordings[0]);
+            } else {
+              // Update selected recording reference
+              const updatedSel = json.data.recordings.find((r: any) => (r.id || r._id) === (selectedRecording.id || (selectedRecording as any)._id));
+              if (updatedSel) setSelectedRecording(updatedSel);
+            }
           } else {
             setSelectedRecording(null);
           }
@@ -119,9 +129,27 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
           setSelectedRecording(remaining.length > 0 ? remaining[0] : null);
           setIsPlaying(false);
         }
+        fetchMeetingDetails();
       }
     } catch (err) {
       console.error('Failed to delete audio recording:', err);
+    }
+  };
+
+  const handleRetryTranscription = async (recId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRetryingRecordingId(recId);
+    try {
+      const res = await fetch(`http://localhost:5000/api/v1/transcripts/retry/${recId}`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        await fetchMeetingDetails();
+      }
+    } catch (err) {
+      console.error('Failed to retry transcription:', err);
+    } finally {
+      setRetryingRecordingId(null);
     }
   };
 
@@ -178,8 +206,8 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#090D16', overflow: 'hidden', userSelect: 'none' }}>
-      {/* Header Bar */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#090D16', overflow: 'hidden', userSelect: 'none', position: 'relative' }}>
+      {/* Top Header Bar */}
       <div style={{
         padding: '1.25rem 2rem',
         backgroundColor: '#0F172A',
@@ -242,10 +270,11 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
             <Star size={20} color={meeting.isStarred ? '#F59E0B' : '#475569'} fill={meeting.isStarred ? '#F59E0B' : 'none'} />
           </button>
 
+          {/* Granola-style Permanent "Add Follow-up Recording" Button */}
           <button
-            onClick={onOpenRecordingModal}
+            onClick={() => onOpenRecordingModalForMeeting(meetingId)}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.55rem 1.1rem',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%)',
@@ -255,17 +284,18 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(6, 182, 212, 0.35)'
             }}
           >
             <Plus size={16} />
-            Add Recording
+            Add Follow-up Recording
           </button>
         </div>
       </div>
 
       {/* Main Content Workspace */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', paddingBottom: '70px' }}>
         {/* Left Pane: Recordings & Notes Editor */}
         <div style={{
           flex: '1.1',
@@ -276,23 +306,29 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
         }}>
           {/* Recordings Carousel */}
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#0F172A' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-              Recordings ({recordings.length})
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Recordings Carousel ({recordings.length})
+              </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
               {recordings.length === 0 ? (
-                <div style={{ fontSize: '0.85rem', color: '#64748B' }}>No speech recordings added yet. Click "+ Add Recording".</div>
+                <div style={{ fontSize: '0.85rem', color: '#64748B' }}>
+                  No recordings attached to this meeting container. Click "+ Add Follow-up Recording".
+                </div>
               ) : (
                 recordings.map((rec, idx) => {
                   const recId = rec.id || (rec as any)._id;
                   const isSel = selectedRecording && (selectedRecording.id || (selectedRecording as any)._id) === recId;
+                  const sttStatus = (rec as any).sttStatus || 'completed';
+
                   return (
                     <div
                       key={recId}
                       onClick={() => setSelectedRecording(rec)}
                       style={{
-                        padding: '0.5rem 0.9rem',
+                        padding: '0.55rem 0.9rem',
                         borderRadius: '10px',
                         backgroundColor: isSel ? '#1E293B' : '#151D2F',
                         border: isSel ? '1px solid #06B6D4' : '1px solid rgba(255, 255, 255, 0.08)',
@@ -304,9 +340,33 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                         color: isSel ? '#F8FAFC' : '#94A3B8'
                       }}
                     >
-                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                      <div style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: sttStatus === 'completed' ? '#10B981' : sttStatus === 'failed' ? '#F43F5E' : '#F59E0B'
+                      }} />
                       <span>Recording {idx + 1}</span>
                       <span style={{ fontSize: '0.75rem', color: '#64748B' }}>{formatTimer(rec.durationSeconds || 10)}</span>
+
+                      {/* Retry Transcription Button if failed or requested */}
+                      <button
+                        onClick={(e) => handleRetryTranscription(recId, e)}
+                        title="Retry Speech-to-Text Transcription"
+                        disabled={retryingRecordingId === recId}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: retryingRecordingId === recId ? '#06B6D4' : '#64748B',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.1rem 0.2rem',
+                          marginLeft: '0.2rem'
+                        }}
+                      >
+                        <RefreshCw size={13} className={retryingRecordingId === recId ? 'spin' : ''} />
+                      </button>
 
                       {/* Delete Specific Speech Button */}
                       <button
@@ -319,9 +379,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          padding: '0.1rem 0.2rem',
-                          marginLeft: '0.2rem',
-                          borderRadius: '4px'
+                          padding: '0.1rem 0.2rem'
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = '#F43F5E')}
                         onMouseLeave={(e) => (e.currentTarget.style.color = '#64748B')}
@@ -486,7 +544,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                 borderBottom: activeTab === 'transcription' ? '2px solid #06B6D4' : '2px solid transparent'
               }}
             >
-              🎙️ Verbatim Transcript
+              🎙️ Merged Verbatim Transcript
             </button>
           </div>
 
@@ -506,7 +564,7 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                     Executive Summary
                   </div>
                   <p style={{ color: '#CBD5E1', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                    {summary?.executiveSummary || 'No summary generated yet. Click "Enhance with AI" to generate structured meeting intelligence.'}
+                    {summary?.executiveSummary || 'No summary generated yet. Click "+ Add Follow-up Recording" or "Enhance with AI" to generate structured meeting intelligence.'}
                   </p>
                 </div>
 
@@ -585,11 +643,11 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                 </div>
               </div>
             ) : (
-              /* Transcription View */
+              /* Merged Verbatim Transcription View */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {!transcript || !transcript.segments || transcript.segments.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '3rem', color: '#64748B', fontSize: '0.9rem' }}>
-                    No transcript generated for this meeting.
+                    No transcript generated yet for this meeting.
                   </div>
                 ) : (
                   transcript.segments.map((seg, idx) => (
@@ -625,6 +683,43 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Floating Bottom Granola-style Action Bar */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '64px',
+        backgroundColor: '#0F172A',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0 2rem',
+        zIndex: 100
+      }}>
+        <button
+          onClick={() => onOpenRecordingModalForMeeting(meetingId)}
+          style={{
+            padding: '0.65rem 2rem',
+            borderRadius: '24px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+            color: '#FFFFFF',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(244, 63, 94, 0.4)'
+          }}
+        >
+          <Mic size={18} fill="#FFFFFF" />
+          Start Recording into Current Meeting
+        </button>
       </div>
     </div>
   );

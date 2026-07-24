@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { WhisperService } from '../services/whisper.service.js';
+import { SummaryService } from '../services/summary.service.js';
 import { Transcript } from '../models/Transcript.js';
+import { Recording } from '../models/Recording.js';
 
 // Trigger audio transcription for a specific recording
 export const transcribeRecording = async (req: Request, res: Response) => {
@@ -14,6 +16,16 @@ export const transcribeRecording = async (req: Request, res: Response) => {
 
     const transcript = await WhisperService.transcribeRecording(recordingId, { language, sttEngine });
 
+    // Trigger AI summary update
+    const recording = await Recording.findById(recordingId);
+    if (recording) {
+      try {
+        await SummaryService.generateSummary(recording.meetingId.toString());
+      } catch (err: any) {
+        console.warn('Summary update warning on retry:', err.message);
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Audio transcribed successfully',
@@ -21,6 +33,31 @@ export const transcribeRecording = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Transcription failed', message: error.message });
+  }
+};
+
+// Retry transcription for a specific recording clip
+export const retryTranscription = async (req: Request, res: Response) => {
+  try {
+    const { recordingId } = req.params;
+    const transcript = await WhisperService.transcribeRecording(recordingId);
+
+    const recording = await Recording.findById(recordingId);
+    if (recording) {
+      try {
+        await SummaryService.generateSummary(recording.meetingId.toString());
+      } catch (e) {
+        // ignore summary errors on retry
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Transcription retried successfully',
+      data: transcript
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Retry transcription failed', message: error.message });
   }
 };
 

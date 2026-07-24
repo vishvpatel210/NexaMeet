@@ -68,6 +68,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     const scheduledDate = new Date(selectedDate);
     scheduledDate.setHours(hours || 12, minutes || 0, 0, 0);
 
+    // Create empty meeting folder for scheduled task
     await ApiService.createMeeting({
       title: taskTitle,
       category: taskCategory,
@@ -274,7 +275,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
           {selectedDateMeetings.length === 0 ? (
             <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748B', fontSize: '0.9rem' }}>
-              No tasks scheduled for this date. Click "+ Schedule Task" above to add a meeting or discussion item.
+              No tasks scheduled for this date. Click "+ Schedule Task" above to create an empty meeting folder.
             </div>
           ) : (
             selectedDateMeetings.map((task) => {
@@ -311,7 +312,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         <CheckCircle2 size={14} /> Summarized
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.75rem', color: '#F59E0B', fontWeight: 500 }}>● Scheduled</span>
+                      <span style={{ fontSize: '0.75rem', color: '#F59E0B', fontWeight: 500 }}>● Scheduled Empty Folder</span>
                     )}
                   </div>
 
@@ -322,7 +323,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     {task.title}
                   </h4>
 
-                  {/* Instant Record & Summarize CTA Button */}
+                  {/* Instant Record Speech into existing Scheduled Meeting Folder */}
                   <button
                     onClick={() => onRecordForMeeting(task)}
                     style={{
@@ -343,7 +344,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     }}
                   >
                     <Mic size={16} color="#F43F5E" />
-                    Record Speech & Summarize
+                    Record Speech into Meeting Folder
                   </button>
                 </div>
               );
@@ -375,7 +376,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <Sparkles size={20} color="#06B6D4" />
               <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.2rem', fontWeight: 700, color: '#F8FAFC' }}>
-                Schedule Task for {selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                Schedule Task Folder for {selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </h3>
             </div>
 
@@ -475,7 +476,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     cursor: 'pointer'
                   }}
                 >
-                  Save Task
+                  Save Meeting Folder
                 </button>
               </div>
             </form>

@@ -19,6 +19,7 @@ export default function App() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRecordingModalOpen, setIsRecordingModalOpen] = useState(false);
+    const [targetRecordingMeetingId, setTargetRecordingMeetingId] = useState(undefined);
     const [backendConnected, setBackendConnected] = useState(true);
     const fetchMeetings = async () => {
         setLoading(true);
@@ -46,6 +47,7 @@ export default function App() {
         const handleKeyDown = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
                 e.preventDefault();
+                setTargetRecordingMeetingId(undefined);
                 setIsRecordingModalOpen((prev) => !prev);
             }
         };
@@ -81,7 +83,12 @@ export default function App() {
         }
     };
     const handleRecordForCalendarTask = (task) => {
-        setSelectedMeeting(task);
+        const taskId = task.id || task._id;
+        setTargetRecordingMeetingId(taskId);
+        setIsRecordingModalOpen(true);
+    };
+    const handleOpenRecordingModalForMeeting = (mId) => {
+        setTargetRecordingMeetingId(mId);
         setIsRecordingModalOpen(true);
     };
     return (_jsxs("div", { style: { display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#090D16', overflow: 'hidden' }, children: [_jsx(Sidebar, { activeView: activeView, onSelectView: (v) => {
@@ -90,13 +97,16 @@ export default function App() {
                 }, activeCategory: activeCategory, onSelectCategory: (cat) => {
                     setActiveCategory(cat);
                     setSelectedMeeting(null);
-                }, onOpenNewMeeting: () => setIsRecordingModalOpen(true) }), _jsx("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }, children: selectedMeeting ? (
+                }, onOpenNewMeeting: () => {
+                    setTargetRecordingMeetingId(undefined);
+                    setIsRecordingModalOpen(true);
+                } }), _jsx("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }, children: selectedMeeting ? (
                 /* Split View Meeting Detail */
-                _jsx(MeetingDetailView, { meeting: selectedMeeting, onBack: () => setSelectedMeeting(null), onToggleStar: handleToggleStar, onOpenRecordingModal: () => setIsRecordingModalOpen(true) })) : activeView === 'calendar' ? (
+                _jsx(MeetingDetailView, { meeting: selectedMeeting, onBack: () => setSelectedMeeting(null), onToggleStar: handleToggleStar, onOpenRecordingModalForMeeting: handleOpenRecordingModalForMeeting })) : activeView === 'calendar' ? (
                 /* Task Calendar Workspace */
                 _jsxs("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }, children: [_jsx(TopNavbar, { searchQuery: searchQuery, onSearchChange: setSearchQuery, onRefresh: fetchMeetings, backendConnected: backendConnected }), _jsx("main", { style: { flex: 1, padding: '1.75rem 2.25rem', overflow: 'hidden' }, children: _jsx(CalendarView, { meetings: meetings, onRefresh: fetchMeetings, onRecordForMeeting: handleRecordForCalendarTask, onSelectMeeting: (m) => setSelectedMeeting(m) }) })] })) : (
                 /* Meetings Dashboard Workspace */
-                _jsxs(_Fragment, { children: [_jsx(TopNavbar, { searchQuery: searchQuery, onSearchChange: setSearchQuery, onRefresh: fetchMeetings, backendConnected: backendConnected }), _jsxs("main", { style: { flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }, children: [_jsxs("div", { style: { marginBottom: '1.25rem' }, children: [_jsx("h1", { style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.75rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.25rem' }, children: "Meetings" }), _jsx("p", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "Manage your AI meeting notes, audio recordings, and structured intelligence." })] }), _jsx(CategoryFilters, { activeCategory: activeCategory, onSelectCategory: setActiveCategory, activeDateScope: activeDateScope, onSelectDateScope: setActiveDateScope }), _jsx(MeetingList, { meetings: meetings, loading: loading, onSelectMeeting: (m) => setSelectedMeeting(m), onToggleStar: handleToggleStar, onDeleteMeeting: handleDeleteMeeting })] })] })) }), _jsx(NewMeetingModal, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), onSubmit: handleCreateMeeting }), _jsx(LiveRecordingModal, { isOpen: isRecordingModalOpen, onClose: () => setIsRecordingModalOpen(false), onRecordingSaved: () => {
+                _jsxs(_Fragment, { children: [_jsx(TopNavbar, { searchQuery: searchQuery, onSearchChange: setSearchQuery, onRefresh: fetchMeetings, backendConnected: backendConnected }), _jsxs("main", { style: { flex: 1, padding: '2rem 2.5rem', overflowY: 'auto' }, children: [_jsxs("div", { style: { marginBottom: '1.25rem' }, children: [_jsx("h1", { style: { fontFamily: 'Outfit, sans-serif', fontSize: '1.75rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.25rem' }, children: "Meetings" }), _jsx("p", { style: { fontSize: '0.85rem', color: '#64748B' }, children: "Manage your AI meeting notes, audio recordings, and structured intelligence." })] }), _jsx(CategoryFilters, { activeCategory: activeCategory, onSelectCategory: setActiveCategory, activeDateScope: activeDateScope, onSelectDateScope: setActiveDateScope }), _jsx(MeetingList, { meetings: meetings, loading: loading, onSelectMeeting: (m) => setSelectedMeeting(m), onToggleStar: handleToggleStar, onDeleteMeeting: handleDeleteMeeting })] })] })) }), _jsx(NewMeetingModal, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), onSubmit: handleCreateMeeting }), _jsx(LiveRecordingModal, { isOpen: isRecordingModalOpen, targetMeetingId: targetRecordingMeetingId, onClose: () => setIsRecordingModalOpen(false), onRecordingSaved: () => {
                     fetchMeetings();
                 } })] }));
 }

@@ -84,7 +84,13 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({
       updateSpectrum();
 
       // MediaRecorder for recording audio buffer
-      const mediaRecorder = new MediaRecorder(stream);
+      const options = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? { mimeType: 'audio/webm;codecs=opus' }
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? { mimeType: 'audio/webm' }
+        : {};
+
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (e) => {
@@ -93,7 +99,7 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({
         }
       };
 
-      mediaRecorder.start(500);
+      mediaRecorder.start(250);
     } catch (err) {
       console.warn('Microphone access unavailable, using simulated audio visualizer:', err);
 
@@ -158,25 +164,22 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({
       }
 
       if (activeMeetingId) {
-        // Convert audio chunks to Blob / ArrayBuffer
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const arrayBuffer = await audioBlob.arrayBuffer();
+        const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const finalDuration = Math.max(1, secondsElapsed);
 
-        // Upload audio recording stream via IPC or API attached directly to activeMeetingId
-        if (window.nexameetAPI?.uploadAudioStream) {
-          await window.nexameetAPI.uploadAudioStream(activeMeetingId, arrayBuffer, 'wav');
-        } else {
-          // Fallback direct HTTP POST fetch
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'recording.wav');
-          formData.append('meetingId', activeMeetingId);
-          formData.append('durationSeconds', secondsElapsed.toString());
+        console.log(`[Stage 1: Live Recording] Saving recording. Duration: ${finalDuration}s, Size: ${audioBlob.size} bytes, MimeType: ${mimeType}`);
 
-          await fetch('http://localhost:5000/api/v1/recordings/upload', {
-            method: 'POST',
-            body: formData
-          });
-        }
+        // Upload audio recording stream attached directly to activeMeetingId
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.webm');
+        formData.append('meetingId', activeMeetingId);
+        formData.append('durationSeconds', finalDuration.toString());
+
+        await fetch('http://localhost:5000/api/v1/recordings/upload', {
+          method: 'POST',
+          body: formData
+        });
       }
     } catch (err) {
       console.error('Failed to save live recording:', err);
@@ -188,8 +191,11 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({
   };
 
   const formatTimer = (totalSecs: number) => {
+    if (totalSecs === undefined || totalSecs === null || isNaN(totalSecs) || !isFinite(totalSecs) || totalSecs < 0) {
+      return '00:00';
+    }
     const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
+    const secs = Math.floor(totalSecs % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -314,7 +320,6 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({
 
         {/* Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          {/* Pause / Resume Button */}
           <button
             onClick={togglePause}
             style={{
@@ -334,7 +339,6 @@ export const LiveRecordingModal: React.FC<LiveRecordingModalProps> = ({
             {isPaused ? <Play size={22} fill="#F59E0B" /> : <Pause size={22} fill="#F59E0B" />}
           </button>
 
-          {/* Stop & Save Button */}
           <button
             onClick={handleStopAndSave}
             disabled={saving}

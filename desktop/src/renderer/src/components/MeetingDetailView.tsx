@@ -99,6 +99,15 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
     fetchMeetingDetails();
   }, [meetingId]);
 
+  useEffect(() => {
+    if (selectedRecording) {
+      const dur = selectedRecording.durationSeconds;
+      setDuration(dur && isFinite(dur) && !isNaN(dur) && dur > 0 ? dur : 10);
+      setCurrentTime(0);
+      setIsPlaying(false);
+    }
+  }, [selectedRecording]);
+
   const handlePlayPause = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -208,6 +217,9 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
   };
 
   const formatTimer = (totalSecs: number) => {
+    if (totalSecs === undefined || totalSecs === null || isNaN(totalSecs) || !isFinite(totalSecs) || totalSecs < 0) {
+      return '00:00';
+    }
     const mins = Math.floor(totalSecs / 60);
     const secs = Math.floor(totalSecs % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -450,7 +462,14 @@ export const MeetingDetailView: React.FC<MeetingDetailViewProps> = ({
                   ref={audioRef}
                   src={`http://localhost:5000/api/v1/recordings/file/${selectedRecording.filePath.split(/[/\\]/).pop()}`}
                   onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
-                  onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+                  onLoadedMetadata={() => {
+                    const dur = audioRef.current?.duration;
+                    if (dur && isFinite(dur) && !isNaN(dur) && dur > 0) {
+                      setDuration(dur);
+                    } else if (selectedRecording.durationSeconds) {
+                      setDuration(selectedRecording.durationSeconds);
+                    }
+                  }}
                   onEnded={() => setIsPlaying(false)}
                 />
               </div>

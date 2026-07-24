@@ -57,6 +57,14 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
     useEffect(() => {
         fetchMeetingDetails();
     }, [meetingId]);
+    useEffect(() => {
+        if (selectedRecording) {
+            const dur = selectedRecording.durationSeconds;
+            setDuration(dur && isFinite(dur) && !isNaN(dur) && dur > 0 ? dur : 10);
+            setCurrentTime(0);
+            setIsPlaying(false);
+        }
+    }, [selectedRecording]);
     const handlePlayPause = () => {
         if (!audioRef.current)
             return;
@@ -163,6 +171,9 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
         }
     };
     const formatTimer = (totalSecs) => {
+        if (totalSecs === undefined || totalSecs === null || isNaN(totalSecs) || !isFinite(totalSecs) || totalSecs < 0) {
+            return '00:00';
+        }
         const mins = Math.floor(totalSecs / 60);
         const secs = Math.floor(totalSecs % 60);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -269,7 +280,15 @@ export const MeetingDetailView = ({ meeting, onBack, onToggleStar, onOpenRecordi
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     cursor: 'pointer'
-                                                }, children: isPlaying ? _jsx(Pause, { size: 18, fill: "#FFF" }) : _jsx(Play, { size: 18, fill: "#FFF" }) }), _jsxs("div", { style: { flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }, children: [_jsx("span", { style: { fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#94A3B8' }, children: formatTimer(currentTime) }), _jsx("input", { type: "range", min: 0, max: duration || 100, value: currentTime, onChange: (e) => handleSeek(parseFloat(e.target.value)), style: { flex: 1, cursor: 'pointer', accentColor: '#06B6D4' } }), _jsx("span", { style: { fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#64748B' }, children: formatTimer(duration) })] }), _jsx(Volume2, { size: 16, color: "#64748B" }), _jsx("audio", { ref: audioRef, src: `http://localhost:5000/api/v1/recordings/file/${selectedRecording.filePath.split(/[/\\]/).pop()}`, onTimeUpdate: () => setCurrentTime(audioRef.current?.currentTime || 0), onLoadedMetadata: () => setDuration(audioRef.current?.duration || 0), onEnded: () => setIsPlaying(false) })] }))] }), _jsxs("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', padding: '1.25rem 1.5rem' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }, children: [_jsx("span", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }, children: "Handwritten Notes" }), _jsxs("button", { onClick: handleGenerateAISummary, disabled: loadingAI, style: {
+                                                }, children: isPlaying ? _jsx(Pause, { size: 18, fill: "#FFF" }) : _jsx(Play, { size: 18, fill: "#FFF" }) }), _jsxs("div", { style: { flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }, children: [_jsx("span", { style: { fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#94A3B8' }, children: formatTimer(currentTime) }), _jsx("input", { type: "range", min: 0, max: duration || 100, value: currentTime, onChange: (e) => handleSeek(parseFloat(e.target.value)), style: { flex: 1, cursor: 'pointer', accentColor: '#06B6D4' } }), _jsx("span", { style: { fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', color: '#64748B' }, children: formatTimer(duration) })] }), _jsx(Volume2, { size: 16, color: "#64748B" }), _jsx("audio", { ref: audioRef, src: `http://localhost:5000/api/v1/recordings/file/${selectedRecording.filePath.split(/[/\\]/).pop()}`, onTimeUpdate: () => setCurrentTime(audioRef.current?.currentTime || 0), onLoadedMetadata: () => {
+                                                    const dur = audioRef.current?.duration;
+                                                    if (dur && isFinite(dur) && !isNaN(dur) && dur > 0) {
+                                                        setDuration(dur);
+                                                    }
+                                                    else if (selectedRecording.durationSeconds) {
+                                                        setDuration(selectedRecording.durationSeconds);
+                                                    }
+                                                }, onEnded: () => setIsPlaying(false) })] }))] }), _jsxs("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', padding: '1.25rem 1.5rem' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }, children: [_jsx("span", { style: { fontSize: '0.8rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }, children: "Handwritten Notes" }), _jsxs("button", { onClick: handleGenerateAISummary, disabled: loadingAI, style: {
                                                     padding: '0.35rem 0.75rem',
                                                     borderRadius: '8px',
                                                     border: '1px solid #06B6D4',
